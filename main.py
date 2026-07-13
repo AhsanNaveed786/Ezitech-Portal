@@ -2,11 +2,30 @@ from fastapi import FastAPI
 from backend.database import engine
 from backend.models import Student, Mentor, Attendance
 from backend.models import Base
+from backend.routers.auth_services import router as auth_router
+from fastapi import Depends
+from backend.models import Student
+from utils.dependencies import get_current_student
+
 
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+app.include_router(auth_router)
+
+@app.get("/student/profile")
+def student_profile(current_student: Student = Depends(get_current_student)):
+    return {
+        "id": current_student.id,
+        "name": current_student.name,
+        "email": current_student.email,
+        "github_username": current_student.github_username,
+        "batch": current_student.batch,
+        "gender": current_student.gender
+    }
+
 @app.get("/")
 def home():
     return {"message": "Hello, World!"}     
