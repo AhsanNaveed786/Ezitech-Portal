@@ -33,15 +33,6 @@ class CEORegistration(BaseModel):
     gender: str
     phone_number: str
 
-class CEORegistration(BaseModel):
-    name: str
-    email: str
-    password: str
-    phone_number: str
-
-class AttendanceRecord(BaseModel):
-    status: str
-
 class StudentLogin(BaseModel):
     email: str
     password: str
@@ -57,3 +48,26 @@ class AdminLogin(BaseModel):
 class CEOLogin(BaseModel):
     email: str
     password: str
+
+from datetime import date, datetime
+
+
+class AttendanceCheckIn(BaseModel):
+    mentor_id: int
+
+
+class AttendanceCheckOut(BaseModel):
+    pass
+
+
+class AttendanceResponse(BaseModel):
+    id: int
+    student_id: int
+    mentor_id: int
+    date: date
+    status: str
+    checked_in_time: datetime | None
+    checked_out_time: datetime | None
+
+    class Config:
+        from_attributes = True

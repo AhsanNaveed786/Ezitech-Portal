@@ -1,6 +1,6 @@
 
 from backend.database import Base
-from sqlalchemy import Column, Integer, String, Enum, Date, DateTime
+from sqlalchemy import Column, ForeignKey, Integer, String, Enum, Date, DateTime
 class Student(Base):
     __tablename__ = "students"
     id = Column(Integer, primary_key=True)
@@ -55,8 +55,8 @@ class CEO(Base):
 class Attendance(Base):
     __tablename__ = "attendance"
     id = Column(Integer, primary_key=True)
-    student_id = Column(Integer, nullable=False)
-    mentor_id = Column(Integer, nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"))
+    mentor_id = Column(Integer, ForeignKey("mentors.id"))
     date = Column(Date, nullable=False)
     status = Column(
         Enum("Present", "Absent",name = "attendance_enum"), 
