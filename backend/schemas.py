@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from datetime import date
 
 class StudentRegistration(BaseModel):
     name: str
@@ -71,3 +71,16 @@ class AttendanceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class LeaveApplication(BaseModel):
+    reason: str
+    leave_date: date
+
+class ProjectSubmission(BaseModel):
+    title: str
+    description: str
+    github_link: str
+    tech_stack: str
+
+class ProjectReview(BaseModel):
+    remarks: str
