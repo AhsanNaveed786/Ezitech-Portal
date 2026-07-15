@@ -8,7 +8,8 @@ from backend.models import Student
 from utils.dependencies import get_current_student
 from backend.routers.attendance import router as attendance_router
 from backend.routers.dashboard import router as dashboard_router
-
+from backend.routers.leave import router as leave_router
+from backend.routers.project import router as project_router
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -16,6 +17,8 @@ app = FastAPI()
 app.include_router(auth_router)
 app.include_router(attendance_router)
 app.include_router(dashboard_router)
+app.include_router(leave_router)
+app.include_router(project_router)
 
 @app.get("/student/profile")
 def student_profile(current_student: Student = Depends(get_current_student)):
