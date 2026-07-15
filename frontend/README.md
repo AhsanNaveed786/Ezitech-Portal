@@ -37,16 +37,6 @@ tailwind.config.js  # Full color/typography/shadow token system (the "elite blue
 - **Signature element:** the circular **Engineering Score ring**, used consistently across all three dashboards instead of generic progress bars, tying every screen back to the platform's core scoring concept. Intern IDs are styled like ticket/engineering references (`EEF-014`) for the same reason.
 - **Motion:** subtle rise-in on cards, live-pulse indicator on the AI engine status, animated ring fill — kept restrained per the brief.
 
-## Wiring to your FastAPI backend
 
-Every page currently imports from `src/data/mockData.js`. To connect the real backend:
 
-1. Create `src/lib/api.js` with `fetch`/`axios` calls to your FastAPI endpoints (e.g. `GET /api/interns`, `GET /api/mentors`, `GET /api/reports/weekly`).
-2. Replace the static imports in each page (`MentorDashboard.jsx`, `AdminDashboard.jsx`, `StudentDashboard.jsx`) with `useEffect` + `useState` data fetching, or React Query if you add it.
-3. Keep the shape of the mock objects (see `mockData.js`) as your API contract reference — every field maps directly to a functional requirement in the case study (attendance, github, dailyActivity, taskCompletion, codeReview, caseStudyAvg, mentorFeedback, communication, engineeringCredits, learningSpeed, deadlineCompliance).
 
-## Notes for your case study submission
-
-- This covers the **frontend** deliverable only (Mentor/Admin/Student dashboards + AI recommendation display + report visualizations).
-- Backend (FastAPI, LangGraph, PostgreSQL, Redis, ChromaDB, Sentence Transformers) is not included — say the word when you're ready to move to that phase and we'll build it to match this data contract exactly.
-- The Bonus Challenge (Executive AI Dashboard with natural-language queries) is not yet built here — happy to add it as a fourth workspace when you get to that stage.
