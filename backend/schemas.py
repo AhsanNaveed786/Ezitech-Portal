@@ -135,3 +135,95 @@ class AIRoadmapResponse(BaseModel):
     current_level: str
     estimated_completion: str
     roadmap: list[RoadmapWeek]
+
+from typing import List
+from pydantic import BaseModel
+
+
+class StudentPerformanceSummary(BaseModel):
+    student_id: int
+    student_name: str
+    engineering_score: int
+    attendance_percentage: float
+    total_projects: int
+    approved_projects: int
+    rejected_projects: int
+    performance_level: str
+
+
+class MentorTeamAnalytics(BaseModel):
+    total_students: int
+    average_engineering_score: float
+    average_attendance: float
+    total_projects: int
+    approved_projects: int
+    pending_projects: int
+    rejected_projects: int
+    students_requiring_attention: int
+
+
+class MentorRecommendation(BaseModel):
+    student_id: int
+    student_name: str
+    recommendation: str
+    priority: str
+
+
+class StudentEngineeringGrowth(BaseModel):
+    student_id: int
+    student_name: str
+    engineering_score: int
+
+    attendance_score: int
+    project_score: int
+    discipline_score: int
+
+    attendance_percentage: float
+    project_completion_percentage: float
+
+    current_level: str
+    growth_status: str
+
+
+class MentorDashboardResponse(BaseModel):
+    team_analytics: MentorTeamAnalytics
+    top_performers: List[StudentPerformanceSummary]
+    weak_performers: List[StudentPerformanceSummary]
+    ai_recommendations: List[MentorRecommendation]
+
+from pydantic import BaseModel
+
+
+class AdminTopInternResponse(BaseModel):
+    rank: int
+    student_id: int
+    student_name: str
+    attendance_percentage: float
+    total_projects: int
+    approved_projects: int
+    project_approval_percentage: float
+    readiness_score: float
+
+
+class AdminTopInternListResponse(BaseModel):
+    top_interns: list[AdminTopInternResponse]
+
+
+
+class AdminRecommendationItem(BaseModel):
+    type: str
+    reason: str
+    priority: str
+
+
+class AdminInternRecommendation(BaseModel):
+    student_id: int
+    student_name: str
+    readiness_score: float
+    attendance_percentage: float
+    approved_projects: int
+    recommendations: list[AdminRecommendationItem]
+
+
+class AdminRecommendationListResponse(BaseModel):
+    interns: list[AdminInternRecommendation]
