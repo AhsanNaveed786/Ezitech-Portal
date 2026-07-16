@@ -110,3 +110,28 @@ class AIDashboardResponse(BaseModel):
     weak_areas: list[str]
     recommendations: list[str]
     next_case_study: str
+
+class ScoreBreakdown(BaseModel):
+    attendance: int
+    projects: int
+    discipline: int
+
+
+class AIDashboardResponse(BaseModel):
+    engineering_score: int
+    score_breakdown: ScoreBreakdown
+    skill_growth: str
+    weak_areas: list[str]
+    recommendations: list[str]
+    next_case_study: str
+
+class RoadmapWeek(BaseModel):
+    week: int
+    topic: str
+    goal: str
+
+
+class AIRoadmapResponse(BaseModel):
+    current_level: str
+    estimated_completion: str
+    roadmap: list[RoadmapWeek]
