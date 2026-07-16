@@ -84,3 +84,29 @@ class ProjectSubmission(BaseModel):
 
 class ProjectReview(BaseModel):
     remarks: str
+
+# AI Chat
+
+class AIChatRequest(BaseModel):
+    message: str
+
+
+class AIChatResponse(BaseModel):
+    response: str
+
+from pydantic import BaseModel
+
+
+class AIDashboardResponse(BaseModel):
+    engineering_score: int
+    skill_growth: str
+    weak_areas: list[str]
+    recommendations: list[str]
+    next_case_study: str
+
+class AIDashboardResponse(BaseModel):
+    engineering_score: int
+    skill_growth: str
+    weak_areas: list[str]
+    recommendations: list[str]
+    next_case_study: str

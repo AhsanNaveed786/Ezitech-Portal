@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from backend.models import Attendance
-
+from datetime import date
 from backend.models import (
     Student,
     Mentor,
@@ -103,3 +103,34 @@ def ceo_dashboard(
         "total_attendance_records": total_attendance,
         "total_leave_requests": total_leaves
     }
+
+def mentor_dashboard(
+    db: Session
+):
+
+    total_students = db.query(Student).count()
+
+    today_attendance = db.query(Attendance).filter(
+        Attendance.date == date.today()
+    ).count()
+
+    pending_leaves = db.query(Leave).filter(
+        Leave.status == "Pending"
+    ).count()
+
+    approved_leaves = db.query(Leave).filter(
+        Leave.status == "Approved"
+    ).count()
+
+    rejected_leaves = db.query(Leave).filter(
+        Leave.status == "Rejected"
+    ).count()
+
+    return {
+        "total_students": total_students,
+        "today_attendance": today_attendance,
+        "pending_leaves": pending_leaves,
+        "approved_leaves": approved_leaves,
+        "rejected_leaves": rejected_leaves
+    }
+
