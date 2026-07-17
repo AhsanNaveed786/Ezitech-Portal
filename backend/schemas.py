@@ -227,3 +227,127 @@ class AdminInternRecommendation(BaseModel):
 
 class AdminRecommendationListResponse(BaseModel):
     interns: list[AdminInternRecommendation]
+
+class WeeklyPerformerItem(BaseModel):
+    student_id: int
+    student_name: str
+    engineering_score: float
+    attendance_percentage: float
+    approved_projects: int
+
+
+class WeeklyEngineeringReportResponse(BaseModel):
+    period_start: str
+    period_end: str
+
+    total_interns: int
+    average_engineering_score: float
+    average_attendance: float
+
+    total_projects_submitted: int
+    approved_projects: int
+    pending_projects: int
+    rejected_projects: int
+
+    top_performers: list[WeeklyPerformerItem]
+    interns_requiring_attention: list[WeeklyPerformerItem]
+
+    productivity_level: str
+    ai_summary: str
+    recommendations: list[str]
+
+class MonthlyPeriodPerformance(BaseModel):
+    period_start: str
+    period_end: str
+    average_engineering_score: float
+    average_attendance: float
+    total_projects: int
+    approved_projects: int
+    pending_projects: int
+    rejected_projects: int
+
+
+class MonthlyGrowthReportResponse(BaseModel):
+    previous_period: MonthlyPeriodPerformance
+    current_period: MonthlyPeriodPerformance
+
+    engineering_score_growth: float
+    attendance_growth: float
+    project_growth: int
+    approved_project_growth: int
+
+    growth_status: str
+    ai_summary: str
+    recommendations: list[str]
+
+
+class MentorStudentSummary(BaseModel):
+    student_id: int
+    student_name: str
+    engineering_score: int
+    attendance_percentage: float
+    approved_projects: int
+
+
+class MentorSummaryItem(BaseModel):
+    mentor_id: int
+    mentor_name: str
+    department: str | None
+
+    total_assigned_students: int
+    average_engineering_score: float
+    average_attendance: float
+
+    total_projects: int
+    approved_projects: int
+    pending_projects: int
+    rejected_projects: int
+
+    students_requiring_attention: int
+
+    top_performer: MentorStudentSummary | None
+    weak_performer: MentorStudentSummary | None
+
+    performance_status: str
+    ai_summary: str
+    recommendations: list[str]
+
+
+class MentorSummaryReportResponse(BaseModel):
+    total_mentors: int
+    mentors: list[MentorSummaryItem]
+
+
+class TeamPerformanceItem(BaseModel):
+    team_name: str
+    total_students: int
+
+    average_engineering_score: float
+    average_attendance: float
+
+    total_projects: int
+    approved_projects: int
+    pending_projects: int
+    rejected_projects: int
+
+    project_approval_percentage: float
+    students_requiring_attention: int
+
+    top_performer: MentorStudentSummary | None
+    performance_status: str
+
+
+class TeamPerformanceReportResponse(BaseModel):
+    total_teams: int
+    total_students: int
+
+    overall_average_engineering_score: float
+    overall_average_attendance: float
+
+    strongest_team: str | None
+    weakest_team: str | None
+
+    teams: list[TeamPerformanceItem]
+
+    ai_summary: str
+    recommendations: list[str]

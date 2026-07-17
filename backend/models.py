@@ -5,19 +5,34 @@ from datetime import datetime
 
 from backend.database import Base
 from sqlalchemy import Column, ForeignKey, Integer, String, Enum, Date, DateTime
+
 class Student(Base):
     __tablename__ = "students"
+
     id = Column(Integer, primary_key=True)
     name = Column(String(50))
     email = Column(String(100), unique=True)
     password = Column(String(100))
     phone_number = Column(String(11), unique=True)
     github_username = Column(String(50), unique=True)
+
     gender = Column(
-        Enum("Male", "Female", "Other", name="gender_enum"),
+        Enum(
+            "Male",
+            "Female",
+            "Other",
+            name="gender_enum"
+        ),
         nullable=False
     )
+
     batch = Column(String(20))
+
+    mentor_id = Column(
+        Integer,
+        ForeignKey("mentors.id"),
+        nullable=True
+    )
     
 class Mentor(Base):
     __tablename__ = "mentors"

@@ -1,12 +1,41 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from backend.schemas import (
+    MentorSummaryReportResponse
+)
+
+from backend.schemas import (
+    TeamPerformanceReportResponse
+)
+
+from backend.services.ai import (
+    get_team_performance_report
+)
+
+
+from backend.services.ai import (
+    get_mentor_summary_report
+)
+
 from backend.schemas import AdminRecommendationListResponse
 
 from backend.services.ai import get_admin_ai_recommendations
+from backend.schemas import (
+    MonthlyGrowthReportResponse
+)
 
+from backend.services.ai import (
+    get_monthly_growth_report
+)
 from backend.database import get_db
 from backend.models import Mentor
+
+from backend.schemas import WeeklyEngineeringReportResponse
+
+from backend.services.ai import (
+    get_weekly_engineering_report
+)
 
 from backend.schemas import (
     MentorDashboardResponse,
@@ -45,11 +74,6 @@ from backend.models import Admin
 from backend.schemas import AdminTopInternListResponse
 from backend.services.ai import get_admin_top_interns
 from utils.dependencies import get_current_admin
-
-
-
-
-
 
 router = APIRouter(
 
@@ -271,3 +295,62 @@ def admin_ai_recommendations(
         limit=limit
     )
 
+
+@router.get(
+    "/reports/weekly-engineering",
+    response_model=WeeklyEngineeringReportResponse
+)
+def weekly_engineering_report(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_weekly_engineering_report(
+        db=db
+    )
+
+
+@router.get(
+    "/reports/monthly-growth",
+    response_model=MonthlyGrowthReportResponse
+)
+def monthly_growth_report(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_monthly_growth_report(
+        db=db
+    )
+
+
+@router.get(
+    "/reports/mentor-summary",
+    response_model=MentorSummaryReportResponse
+)
+def mentor_summary_report(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_mentor_summary_report(
+        db=db
+    )
+
+
+@router.get(
+    "/reports/team-performance",
+    response_model=TeamPerformanceReportResponse
+)
+def team_performance_report(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_team_performance_report(
+        db=db
+    )
