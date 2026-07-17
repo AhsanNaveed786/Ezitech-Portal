@@ -13,6 +13,13 @@ from backend.services.ai import (
     get_team_performance_report
 )
 
+from backend.schemas import (
+    TechnologyPerformanceReportResponse
+)
+
+from backend.services.ai import (
+    get_technology_performance_report
+)
 
 from backend.services.ai import (
     get_mentor_summary_report
@@ -352,5 +359,19 @@ def team_performance_report(
     db: Session = Depends(get_db)
 ):
     return get_team_performance_report(
+        db=db
+    )
+
+@router.get(
+    "/reports/technology-performance",
+    response_model=TechnologyPerformanceReportResponse
+)
+def technology_performance_report(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_technology_performance_report(
         db=db
     )

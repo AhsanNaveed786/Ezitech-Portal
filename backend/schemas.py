@@ -351,3 +351,26 @@ class TeamPerformanceReportResponse(BaseModel):
 
     ai_summary: str
     recommendations: list[str]
+
+
+class TechnologyPerformanceItem(BaseModel):
+    technology: str
+    total_projects: int
+    approved_projects: int
+    pending_projects: int
+    rejected_projects: int
+    approval_percentage: float
+    performance_status: str
+
+
+class TechnologyPerformanceReportResponse(BaseModel):
+    total_technologies: int
+    total_projects_analyzed: int
+
+    strongest_technology: str | None
+    weakest_technology: str | None
+
+    technologies: list[TechnologyPerformanceItem]
+
+    ai_summary: str
+    recommendations: list[str]

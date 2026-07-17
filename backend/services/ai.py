@@ -3,6 +3,16 @@ from utils.groq import client
 from datetime import date, timedelta
 import json
 
+import json
+import re
+
+from collections import defaultdict
+from sqlalchemy.orm import Session
+
+from backend.models import Project
+from utils.groq import client
+
+
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from sqlalchemy.orm import Session
@@ -3005,6 +3015,436 @@ def generate_team_performance_fallback(
     if len(recommendations) < 3:
         recommendations.append(
             "Conduct cross-team technical workshops and project review sessions."
+        )
+
+    return {
+        "ai_summary": summary,
+        "recommendations": recommendations[:3]
+    }
+
+def normalize_technology_name(
+    technology: str
+):
+    technology = technology.strip()
+
+    technology_mapping = {
+        "js": "JavaScript",
+        "javascript": "JavaScript",
+
+        "ts": "TypeScript",
+        "typescript": "TypeScript",
+
+        "reactjs": "React",
+        "react.js": "React",
+        "react": "React",
+
+        "nextjs": "Next.js",
+        "next.js": "Next.js",
+
+        "nodejs": "Node.js",
+        "node.js": "Node.js",
+        "node": "Node.js",
+
+        "expressjs": "Express.js",
+        "express.js": "Express.js",
+        "express": "Express.js",
+
+        "fastapi": "FastAPI",
+        "django": "Django",
+        "flask": "Flask",
+
+        "postgres": "PostgreSQL",
+        "postgresql": "PostgreSQL",
+
+        "mysql": "MySQL",
+        "mongodb": "MongoDB",
+        "mongo": "MongoDB",
+        "sqlite": "SQLite",
+
+        "html": "HTML",
+        "css": "CSS",
+
+        "tailwind": "Tailwind CSS",
+        "tailwindcss": "Tailwind CSS",
+        "tailwind css": "Tailwind CSS",
+
+        "python": "Python",
+        "java": "Java",
+        "c++": "C++",
+        "c#": "C#",
+
+        "docker": "Docker",
+        "kubernetes": "Kubernetes",
+
+        "git": "Git",
+        "github": "GitHub",
+
+        "pytorch": "PyTorch",
+        "tensorflow": "TensorFlow",
+
+        "langchain": "LangChain",
+        "rag": "RAG",
+        "n8n": "n8n"
+    }
+
+    lower_name = technology.lower()
+
+    return technology_mapping.get(
+        lower_name,
+        technology.title()
+    )
+
+
+def parse_project_technologies(
+    tech_stack: str
+):
+    if not tech_stack:
+        return []
+
+    technologies = re.split(
+        r"[,;/|]+",
+        tech_stack
+    )
+
+    cleaned_technologies = []
+
+    for technology in technologies:
+        technology = technology.strip()
+
+        if not technology:
+            continue
+
+        normalized_name = normalize_technology_name(
+            technology
+        )
+
+        if normalized_name not in cleaned_technologies:
+            cleaned_technologies.append(
+                normalized_name
+            )
+
+    return cleaned_technologies
+
+
+def get_technology_performance_report(
+    db: Session
+):
+    projects = db.query(Project).all()
+
+    technology_data = defaultdict(
+        lambda: {
+            "total_projects": 0,
+            "approved_projects": 0,
+            "pending_projects": 0,
+            "rejected_projects": 0
+        }
+    )
+
+    for project in projects:
+        technologies = parse_project_technologies(
+            project.tech_stack
+        )
+
+        for technology in technologies:
+            technology_data[
+                technology
+            ]["total_projects"] += 1
+
+            if project.status == "Approved":
+                technology_data[
+                    technology
+                ]["approved_projects"] += 1
+
+            elif project.status == "Pending":
+                technology_data[
+                    technology
+                ]["pending_projects"] += 1
+
+            elif project.status == "Rejected":
+                technology_data[
+                    technology
+                ]["rejected_projects"] += 1
+
+    technology_reports = []
+
+    for technology, data in technology_data.items():
+        total_projects = data["total_projects"]
+
+        approval_percentage = 0.0
+
+        if total_projects > 0:
+            approval_percentage = (
+                data["approved_projects"]
+                / total_projects
+            ) * 100
+
+        if approval_percentage >= 80:
+            performance_status = "Excellent"
+
+        elif approval_percentage >= 65:
+            performance_status = "Good"
+
+        elif approval_percentage >= 50:
+            performance_status = "Average"
+
+        else:
+            performance_status = "Needs Improvement"
+
+        technology_reports.append({
+            "technology": technology,
+            "total_projects": total_projects,
+
+            "approved_projects":
+                data["approved_projects"],
+
+            "pending_projects":
+                data["pending_projects"],
+
+            "rejected_projects":
+                data["rejected_projects"],
+
+            "approval_percentage": round(
+                approval_percentage,
+                2
+            ),
+
+            "performance_status":
+                performance_status
+        })
+
+    technology_reports.sort(
+        key=lambda item: (
+            item["approval_percentage"],
+            item["approved_projects"],
+            item["total_projects"]
+        ),
+        reverse=True
+    )
+
+    if not technology_reports:
+        return {
+            "total_technologies": 0,
+            "total_projects_analyzed": 0,
+            "strongest_technology": None,
+            "weakest_technology": None,
+            "technologies": [],
+            "ai_summary": (
+                "No project technology data is available."
+            ),
+            "recommendations": [
+                "Add project records with valid technology stacks."
+            ]
+        }
+
+    strongest_technology = (
+        technology_reports[0]["technology"]
+    )
+
+    weakest_technology = min(
+        technology_reports,
+        key=lambda item: (
+            item["approval_percentage"],
+            item["approved_projects"],
+            item["total_projects"]
+        )
+    )["technology"]
+
+    report_data = {
+        "total_technologies": len(
+            technology_reports
+        ),
+
+        "total_projects_analyzed": len(
+            projects
+        ),
+
+        "strongest_technology":
+            strongest_technology,
+
+        "weakest_technology":
+            weakest_technology,
+
+        "technologies":
+            technology_reports
+    }
+
+    ai_result = (
+        generate_technology_performance_ai_analysis(
+            report_data=report_data
+        )
+    )
+
+    return {
+        **report_data,
+        "ai_summary": ai_result["ai_summary"],
+        "recommendations":
+            ai_result["recommendations"]
+    }
+
+def generate_technology_performance_ai_analysis(
+    report_data: dict
+):
+    prompt_data = {
+        "total_technologies":
+            report_data["total_technologies"],
+
+        "total_projects_analyzed":
+            report_data["total_projects_analyzed"],
+
+        "strongest_technology":
+            report_data["strongest_technology"],
+
+        "weakest_technology":
+            report_data["weakest_technology"],
+
+        "technologies":
+            report_data["technologies"]
+    }
+
+    prompt = f"""
+You are an AI engineering performance analyst.
+
+Analyze the following technology performance report:
+
+{json.dumps(prompt_data, indent=2)}
+
+Instructions:
+
+- Identify technologies with strong and weak project results.
+- Consider approval percentage and number of projects.
+- Do not judge a technology as highly successful based only
+  on one approved project.
+- Mention technologies with high rejection rates.
+- Provide exactly three practical recommendations.
+- Recommendations may include workshops, mentor support,
+  easier case studies, advanced case studies, testing,
+  documentation or project reviews.
+- Keep the summary short and professional.
+- Return valid JSON only.
+- Do not include markdown.
+- Do not include text outside the JSON object.
+
+Required JSON format:
+
+{{
+    "ai_summary": "Short technology performance summary",
+    "recommendations": [
+        "Recommendation one",
+        "Recommendation two",
+        "Recommendation three"
+    ]
+}}
+"""
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                }
+            ],
+
+            temperature=0.3,
+
+            response_format={
+                "type": "json_object"
+            }
+        )
+
+        result = json.loads(
+            completion.choices[0].message.content
+        )
+
+        recommendations = result.get(
+            "recommendations",
+            []
+        )
+
+        return {
+            "ai_summary": result.get(
+                "ai_summary",
+                "Technology performance report generated."
+            ),
+
+            "recommendations":
+                recommendations[:3]
+        }
+
+    except Exception:
+        return (
+            generate_technology_performance_fallback(
+                report_data=report_data
+            )
+        )
+    
+def generate_technology_performance_fallback(
+    report_data: dict
+):
+    strongest = report_data[
+        "strongest_technology"
+    ]
+
+    weakest = report_data[
+        "weakest_technology"
+    ]
+
+    technologies = report_data[
+        "technologies"
+    ]
+
+    rejected_technologies = sorted(
+        technologies,
+        key=lambda item: item[
+            "rejected_projects"
+        ],
+        reverse=True
+    )
+
+    highest_rejected = None
+
+    if rejected_technologies:
+        highest_rejected = (
+            rejected_technologies[0]
+        )
+
+    summary = (
+        f"{strongest} currently shows the strongest "
+        f"project performance, while {weakest} requires "
+        f"additional improvement and technical support."
+    )
+
+    recommendations = [
+        (
+            f"Arrange focused workshops and mentor support "
+            f"for {weakest}."
+        ),
+        (
+            f"Assign advanced case studies using {strongest} "
+            f"to interns showing strong performance."
+        )
+    ]
+
+    if (
+        highest_rejected
+        and highest_rejected[
+            "rejected_projects"
+        ] > 0
+    ):
+        recommendations.append(
+            (
+                f"Review rejected "
+                f"{highest_rejected['technology']} projects "
+                f"with emphasis on testing, code quality "
+                f"and documentation."
+            )
+        )
+
+    else:
+        recommendations.append(
+            "Continue monitoring technology performance as more projects are submitted."
         )
 
     return {
