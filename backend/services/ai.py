@@ -3451,3 +3451,1640 @@ def generate_technology_performance_fallback(
         "ai_summary": summary,
         "recommendations": recommendations[:3]
     }
+
+def calculate_productivity_period(
+    db: Session,
+    start_date: date,
+    end_date: date
+):
+    students = db.query(Student).all()
+
+    start_datetime = datetime.combine(
+        start_date,
+        time.min
+    )
+
+    end_datetime = datetime.combine(
+        end_date + timedelta(days=1),
+        time.min
+    )
+
+    attendance_percentages = []
+    engineering_scores = []
+
+    for student in students:
+        attendance_records = (
+            db.query(Attendance)
+            .filter(
+                Attendance.student_id == student.id,
+                Attendance.date >= start_date,
+                Attendance.date <= end_date
+            )
+            .all()
+        )
+
+        total_attendance = len(attendance_records)
+
+        present_days = sum(
+            1
+            for record in attendance_records
+            if record.status == "Present"
+        )
+
+        attendance_percentage = 0.0
+
+        if total_attendance > 0:
+            attendance_percentage = (
+                present_days / total_attendance
+            ) * 100
+
+        student_projects = (
+            db.query(Project)
+            .filter(
+                Project.student_id == student.id,
+                Project.submitted_at >= start_datetime,
+                Project.submitted_at < end_datetime
+            )
+            .all()
+        )
+
+        total_student_projects = len(
+            student_projects
+        )
+
+        approved_student_projects = sum(
+            1
+            for project in student_projects
+            if project.status == "Approved"
+        )
+
+        project_approval_percentage = 0.0
+
+        if total_student_projects > 0:
+            project_approval_percentage = (
+                approved_student_projects
+                / total_student_projects
+            ) * 100
+
+        engineering_score = (
+            attendance_percentage * 0.40
+            + project_approval_percentage * 0.60
+        )
+
+        attendance_percentages.append(
+            attendance_percentage
+        )
+
+        engineering_scores.append(
+            engineering_score
+        )
+
+    average_attendance = 0.0
+    average_engineering_score = 0.0
+
+    if students:
+        average_attendance = (
+            sum(attendance_percentages)
+            / len(students)
+        )
+
+        average_engineering_score = (
+            sum(engineering_scores)
+            / len(students)
+        )
+
+    projects = (
+        db.query(Project)
+        .filter(
+            Project.submitted_at >= start_datetime,
+            Project.submitted_at < end_datetime
+        )
+        .all()
+    )
+
+    approved_projects = sum(
+        1
+        for project in projects
+        if project.status == "Approved"
+    )
+
+    pending_projects = sum(
+        1
+        for project in projects
+        if project.status == "Pending"
+    )
+
+    rejected_projects = sum(
+        1
+        for project in projects
+        if project.status == "Rejected"
+    )
+
+    total_projects = len(projects)
+
+    project_approval_percentage = 0.0
+
+    if total_projects > 0:
+        project_approval_percentage = (
+            approved_projects / total_projects
+        ) * 100
+
+    return {
+        "period_start": str(start_date),
+        "period_end": str(end_date),
+
+        "average_attendance": round(
+            average_attendance,
+            2
+        ),
+
+        "total_projects": total_projects,
+        "approved_projects": approved_projects,
+        "pending_projects": pending_projects,
+        "rejected_projects": rejected_projects,
+
+        "project_approval_percentage": round(
+            project_approval_percentage,
+            2
+        ),
+
+        "average_engineering_score": round(
+            average_engineering_score,
+            2
+        )
+    }
+
+
+def get_trend_label(
+    change: float,
+    positive_limit: float = 1.0
+):
+    if change >= positive_limit:
+        return "Increasing"
+
+    if change <= -positive_limit:
+        return "Decreasing"
+
+    return "Stable"
+
+def get_productivity_trends_report(
+    db: Session
+):
+    current_end = date.today()
+
+    current_start = (
+        current_end - timedelta(days=6)
+    )
+
+    previous_end = (
+        current_start - timedelta(days=1)
+    )
+
+    previous_start = (
+        previous_end - timedelta(days=6)
+    )
+
+    current_period = calculate_productivity_period(
+        db=db,
+        start_date=current_start,
+        end_date=current_end
+    )
+
+    previous_period = calculate_productivity_period(
+        db=db,
+        start_date=previous_start,
+        end_date=previous_end
+    )
+
+    attendance_change = round(
+        current_period["average_attendance"]
+        - previous_period["average_attendance"],
+        2
+    )
+
+    project_submission_change = (
+        current_period["total_projects"]
+        - previous_period["total_projects"]
+    )
+
+    approved_project_change = (
+        current_period["approved_projects"]
+        - previous_period["approved_projects"]
+    )
+
+    engineering_score_change = round(
+        current_period["average_engineering_score"]
+        - previous_period["average_engineering_score"],
+        2
+    )
+
+    approval_percentage_change = round(
+        current_period["project_approval_percentage"]
+        - previous_period["project_approval_percentage"],
+        2
+    )
+
+    attendance_trend = get_trend_label(
+        attendance_change
+    )
+
+    project_trend = get_trend_label(
+        project_submission_change,
+        positive_limit=1
+    )
+
+    approval_trend = get_trend_label(
+        approval_percentage_change
+    )
+
+    engineering_trend = get_trend_label(
+        engineering_score_change
+    )
+
+    positive_trends = sum([
+        attendance_trend == "Increasing",
+        project_trend == "Increasing",
+        approval_trend == "Increasing",
+        engineering_trend == "Increasing"
+    ])
+
+    negative_trends = sum([
+        attendance_trend == "Decreasing",
+        project_trend == "Decreasing",
+        approval_trend == "Decreasing",
+        engineering_trend == "Decreasing"
+    ])
+
+    if positive_trends >= 3:
+        overall_productivity_status = (
+            "Strong Improvement"
+        )
+
+    elif positive_trends >= 2:
+        overall_productivity_status = (
+            "Improving"
+        )
+
+    elif negative_trends >= 3:
+        overall_productivity_status = (
+            "Needs Immediate Attention"
+        )
+
+    elif negative_trends >= 2:
+        overall_productivity_status = (
+            "Declining"
+        )
+
+    else:
+        overall_productivity_status = "Stable"
+
+    trend_data = {
+        "previous_period": previous_period,
+        "current_period": current_period,
+
+        "attendance_change": attendance_change,
+
+        "project_submission_change":
+            project_submission_change,
+
+        "approved_project_change":
+            approved_project_change,
+
+        "engineering_score_change":
+            engineering_score_change,
+
+        "attendance_trend": attendance_trend,
+        "project_trend": project_trend,
+        "approval_trend": approval_trend,
+        "engineering_trend": engineering_trend,
+
+        "overall_productivity_status":
+            overall_productivity_status
+    }
+
+    ai_result = generate_productivity_trends_ai_analysis(
+        trend_data=trend_data
+    )
+
+    return {
+        **trend_data,
+        "ai_summary": ai_result["ai_summary"],
+        "recommendations":
+            ai_result["recommendations"]
+    }
+
+def generate_productivity_trends_ai_analysis(
+    trend_data: dict
+):
+    prompt = f"""
+You are an AI productivity analyst for an internship platform.
+
+Compare the current seven-day productivity period with the previous seven-day period.
+
+Productivity data:
+
+{json.dumps(trend_data, indent=2)}
+
+Instructions:
+
+- Explain attendance, project submission, project approval and engineering score trends.
+- Clearly mention whether overall productivity is improving, stable or declining.
+- Provide exactly three practical recommendations.
+- Recommendations may include mentor meetings, attendance improvement,
+  project reviews, technical workshops, easier case studies,
+  advanced case studies, testing or documentation.
+- Keep the summary short and professional.
+- Return valid JSON only.
+- Do not include markdown.
+- Do not include text outside the JSON object.
+
+Required JSON format:
+
+{{
+    "ai_summary": "Short productivity trends summary",
+    "recommendations": [
+        "Recommendation one",
+        "Recommendation two",
+        "Recommendation three"
+    ]
+}}
+"""
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                }
+            ],
+
+            temperature=0.3,
+
+            response_format={
+                "type": "json_object"
+            }
+        )
+
+        result = json.loads(
+            completion.choices[0].message.content
+        )
+
+        recommendations = result.get(
+            "recommendations",
+            []
+        )
+
+        return {
+            "ai_summary": result.get(
+                "ai_summary",
+                "Productivity trends report generated."
+            ),
+
+            "recommendations":
+                recommendations[:3]
+        }
+
+    except Exception:
+        return generate_productivity_trends_fallback(
+            trend_data=trend_data
+        )
+    
+def generate_productivity_trends_fallback(
+    trend_data: dict
+):
+    status = trend_data[
+        "overall_productivity_status"
+    ]
+
+    attendance_trend = trend_data[
+        "attendance_trend"
+    ]
+
+    project_trend = trend_data[
+        "project_trend"
+    ]
+
+    engineering_trend = trend_data[
+        "engineering_trend"
+    ]
+
+    if status in [
+        "Strong Improvement",
+        "Improving"
+    ]:
+        summary = (
+            "Overall intern productivity is improving "
+            "compared with the previous seven-day period."
+        )
+
+    elif status == "Stable":
+        summary = (
+            "Overall intern productivity remained stable "
+            "during the current seven-day period."
+        )
+
+    else:
+        summary = (
+            "Overall intern productivity declined and "
+            "requires additional mentor and technical support."
+        )
+
+    recommendations = []
+
+    if attendance_trend == "Decreasing":
+        recommendations.append(
+            "Follow up with interns showing declining attendance and reinforce weekly participation expectations."
+        )
+
+    if project_trend == "Decreasing":
+        recommendations.append(
+            "Review project workloads and assign practical tasks with clear weekly deadlines."
+        )
+
+    if engineering_trend == "Decreasing":
+        recommendations.append(
+            "Schedule technical review sessions for interns whose engineering scores are declining."
+        )
+
+    if len(recommendations) < 3:
+        recommendations.append(
+            "Recognize productive interns and assign advanced case studies where appropriate."
+        )
+
+    if len(recommendations) < 3:
+        recommendations.append(
+            "Review pending and rejected projects with mentors to improve approval rates."
+        )
+
+    if len(recommendations) < 3:
+        recommendations.append(
+            "Track attendance and project activity every week to identify productivity problems early."
+        )
+
+    return {
+        "ai_summary": summary,
+        "recommendations": recommendations[:3]
+    }
+
+def is_student_active(
+    student: Student,
+    db: Session,
+    activity_days: int = 14
+):
+    activity_start_date = (
+        date.today() - timedelta(days=activity_days - 1)
+    )
+
+    activity_start_datetime = datetime.combine(
+        activity_start_date,
+        time.min
+    )
+
+    recent_attendance = (
+        db.query(Attendance)
+        .filter(
+            Attendance.student_id == student.id,
+            Attendance.date >= activity_start_date
+        )
+        .first()
+    )
+
+    recent_project = (
+        db.query(Project)
+        .filter(
+            Project.student_id == student.id,
+            Project.submitted_at >= activity_start_datetime
+        )
+        .first()
+    )
+
+    return bool(
+        recent_attendance or recent_project
+    )
+
+
+def is_student_active(
+    student: Student,
+    db: Session,
+    activity_days: int = 14
+):
+    activity_start_date = (
+        date.today() - timedelta(days=activity_days - 1)
+    )
+
+    activity_start_datetime = datetime.combine(
+        activity_start_date,
+        time.min
+    )
+
+    recent_attendance = (
+        db.query(Attendance)
+        .filter(
+            Attendance.student_id == student.id,
+            Attendance.date >= activity_start_date
+        )
+        .first()
+    )
+
+    recent_project = (
+        db.query(Project)
+        .filter(
+            Project.student_id == student.id,
+            Project.submitted_at >= activity_start_datetime
+        )
+        .first()
+    )
+
+    return bool(
+        recent_attendance or recent_project
+    )
+
+
+
+def get_overall_internship_health(
+    db: Session
+):
+    students = db.query(Student).all()
+
+    total_interns = len(students)
+
+    if total_interns == 0:
+        return {
+            "health_score": 0.0,
+            "health_status": "No Data",
+
+            "metrics": {
+                "total_interns": 0,
+                "active_interns": 0,
+                "inactive_interns": 0,
+                "average_engineering_score": 0.0,
+                "average_attendance": 0.0,
+                "total_projects": 0,
+                "approved_projects": 0,
+                "pending_projects": 0,
+                "rejected_projects": 0,
+                "project_approval_percentage": 0.0,
+                "students_requiring_attention": 0,
+                "placement_ready_interns": 0
+            },
+
+            "ai_summary": (
+                "No intern data is currently available."
+            ),
+
+            "recommendations": [
+                "Add interns and performance records before generating platform health analysis."
+            ]
+        }
+
+    performances = []
+
+    active_interns = 0
+    placement_ready_interns = 0
+    students_requiring_attention = 0
+
+    for student in students:
+        performance = calculate_student_engineering_score(
+            student=student,
+            db=db
+        )
+
+        performances.append(performance)
+
+        if is_student_active(
+            student=student,
+            db=db
+        ):
+            active_interns += 1
+
+        if (
+            performance["engineering_score"] >= 80
+            and performance["attendance_percentage"] >= 80
+            and performance["approved_projects"] >= 3
+        ):
+            placement_ready_interns += 1
+
+        if (
+            performance["engineering_score"] < 60
+            or performance["attendance_percentage"] < 70
+        ):
+            students_requiring_attention += 1
+
+    inactive_interns = (
+        total_interns - active_interns
+    )
+
+    average_engineering_score = sum(
+        item["engineering_score"]
+        for item in performances
+    ) / total_interns
+
+    average_attendance = sum(
+        item["attendance_percentage"]
+        for item in performances
+    ) / total_interns
+
+    total_projects = sum(
+        item["total_projects"]
+        for item in performances
+    )
+
+    approved_projects = sum(
+        item["approved_projects"]
+        for item in performances
+    )
+
+    pending_projects = sum(
+        item["pending_projects"]
+        for item in performances
+    )
+
+    rejected_projects = sum(
+        item["rejected_projects"]
+        for item in performances
+    )
+
+    project_approval_percentage = 0.0
+
+    if total_projects > 0:
+        project_approval_percentage = (
+            approved_projects / total_projects
+        ) * 100
+
+    active_percentage = (
+        active_interns / total_interns
+    ) * 100
+
+    attention_percentage = (
+        students_requiring_attention
+        / total_interns
+    ) * 100
+
+    activity_health_score = (
+        active_percentage * 0.20
+    )
+
+    engineering_health_score = (
+        average_engineering_score * 0.30
+    )
+
+    attendance_health_score = (
+        average_attendance * 0.25
+    )
+
+    project_health_score = (
+        project_approval_percentage * 0.25
+    )
+
+    health_score = (
+        activity_health_score
+        + engineering_health_score
+        + attendance_health_score
+        + project_health_score
+    )
+
+    health_score = round(
+        max(0, min(100, health_score)),
+        2
+    )
+
+    if health_score >= 85:
+        health_status = "Excellent"
+
+    elif health_score >= 70:
+        health_status = "Healthy"
+
+    elif health_score >= 55:
+        health_status = "Moderate"
+
+    elif health_score >= 40:
+        health_status = "Needs Improvement"
+
+    else:
+        health_status = "Critical"
+
+    metrics = {
+        "total_interns": total_interns,
+        "active_interns": active_interns,
+        "inactive_interns": inactive_interns,
+
+        "average_engineering_score": round(
+            average_engineering_score,
+            2
+        ),
+
+        "average_attendance": round(
+            average_attendance,
+            2
+        ),
+
+        "total_projects": total_projects,
+        "approved_projects": approved_projects,
+        "pending_projects": pending_projects,
+        "rejected_projects": rejected_projects,
+
+        "project_approval_percentage": round(
+            project_approval_percentage,
+            2
+        ),
+
+        "students_requiring_attention":
+            students_requiring_attention,
+
+        "placement_ready_interns":
+            placement_ready_interns
+    }
+
+    analysis_data = {
+        "health_score": health_score,
+        "health_status": health_status,
+        "attention_percentage": round(
+            attention_percentage,
+            2
+        ),
+        "metrics": metrics
+    }
+
+    ai_result = (
+        generate_internship_health_ai_analysis(
+            analysis_data=analysis_data
+        )
+    )
+
+    return {
+        "health_score": health_score,
+        "health_status": health_status,
+        "metrics": metrics,
+        "ai_summary": ai_result["ai_summary"],
+        "recommendations":
+            ai_result["recommendations"]
+    }
+
+def generate_internship_health_ai_analysis(
+    analysis_data: dict
+):
+    prompt = f"""
+You are an executive AI analyst for an internship management platform.
+
+Analyze the following overall internship health data:
+
+{json.dumps(analysis_data, indent=2)}
+
+Instructions:
+
+- Evaluate the overall condition of the internship program.
+- Analyze intern activity, attendance, engineering performance,
+  project approval rate and placement readiness.
+- Mention any major risk such as inactive interns,
+  weak attendance or low project approval.
+- Provide exactly three practical recommendations.
+- Keep the summary concise and professional.
+- Return valid JSON only.
+- Do not include markdown.
+- Do not include any text outside the JSON object.
+
+Required JSON format:
+
+{{
+    "ai_summary": "Short overall internship health summary",
+    "recommendations": [
+        "Recommendation one",
+        "Recommendation two",
+        "Recommendation three"
+    ]
+}}
+"""
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                }
+            ],
+
+            temperature=0.3,
+
+            response_format={
+                "type": "json_object"
+            }
+        )
+
+        result = json.loads(
+            completion.choices[0].message.content
+        )
+
+        recommendations = result.get(
+            "recommendations",
+            []
+        )
+
+        return {
+            "ai_summary": result.get(
+                "ai_summary",
+                "Overall internship health report generated."
+            ),
+
+            "recommendations":
+                recommendations[:3]
+        }
+
+    except Exception:
+        return generate_internship_health_fallback(
+            analysis_data=analysis_data
+        )
+    
+def generate_internship_health_fallback(
+    analysis_data: dict
+):
+    health_status = analysis_data[
+        "health_status"
+    ]
+
+    metrics = analysis_data["metrics"]
+
+    inactive_interns = metrics[
+        "inactive_interns"
+    ]
+
+    average_attendance = metrics[
+        "average_attendance"
+    ]
+
+    project_approval_percentage = metrics[
+        "project_approval_percentage"
+    ]
+
+    attention_count = metrics[
+        "students_requiring_attention"
+    ]
+
+    if health_status in [
+        "Excellent",
+        "Healthy"
+    ]:
+        summary = (
+            "The internship program is currently showing "
+            "healthy overall engineering and productivity performance."
+        )
+
+    elif health_status == "Moderate":
+        summary = (
+            "The internship program is stable, but several "
+            "performance indicators require improvement."
+        )
+
+    else:
+        summary = (
+            "The internship program requires immediate attention "
+            "due to weak activity or engineering performance."
+        )
+
+    recommendations = []
+
+    if inactive_interns > 0:
+        recommendations.append(
+            "Contact inactive interns and schedule mentor follow-up meetings."
+        )
+
+    if average_attendance < 75:
+        recommendations.append(
+            "Improve attendance monitoring and investigate repeated absences."
+        )
+
+    if project_approval_percentage < 65:
+        recommendations.append(
+            "Conduct project review workshops focused on code quality, testing and documentation."
+        )
+
+    if attention_count > 0 and len(recommendations) < 3:
+        recommendations.append(
+            "Assign targeted learning plans to interns requiring additional support."
+        )
+
+    if len(recommendations) < 3:
+        recommendations.append(
+            "Assign advanced case studies to strong interns and evaluate them for placement readiness."
+        )
+
+    if len(recommendations) < 3:
+        recommendations.append(
+            "Review internship health metrics every week to identify risks early."
+        )
+
+    return {
+        "ai_summary": summary,
+        "recommendations":
+            recommendations[:3]
+    }
+
+
+def calculate_batch_performance(
+    batch_name: str,
+    students: list,
+    db: Session
+):
+    performances = []
+
+    for student in students:
+        performance = calculate_student_engineering_score(
+            student=student,
+            db=db
+        )
+
+        performances.append(performance)
+
+    total_students = len(performances)
+
+    if total_students == 0:
+        return {
+            "batch": batch_name,
+            "total_students": 0,
+            "average_engineering_score": 0.0,
+            "average_attendance": 0.0,
+            "total_projects": 0,
+            "approved_projects": 0,
+            "pending_projects": 0,
+            "rejected_projects": 0,
+            "project_approval_percentage": 0.0,
+            "placement_ready_students": 0,
+            "students_requiring_attention": 0,
+            "performance_status": "No Data"
+        }
+
+    average_engineering_score = sum(
+        item["engineering_score"]
+        for item in performances
+    ) / total_students
+
+    average_attendance = sum(
+        item["attendance_percentage"]
+        for item in performances
+    ) / total_students
+
+    total_projects = sum(
+        item["total_projects"]
+        for item in performances
+    )
+
+    approved_projects = sum(
+        item["approved_projects"]
+        for item in performances
+    )
+
+    pending_projects = sum(
+        item["pending_projects"]
+        for item in performances
+    )
+
+    rejected_projects = sum(
+        item["rejected_projects"]
+        for item in performances
+    )
+
+    project_approval_percentage = 0.0
+
+    if total_projects > 0:
+        project_approval_percentage = (
+            approved_projects / total_projects
+        ) * 100
+
+    placement_ready_students = sum(
+        1
+        for item in performances
+        if (
+            item["engineering_score"] >= 80
+            and item["attendance_percentage"] >= 80
+            and item["approved_projects"] >= 3
+        )
+    )
+
+    students_requiring_attention = sum(
+        1
+        for item in performances
+        if (
+            item["engineering_score"] < 60
+            or item["attendance_percentage"] < 70
+        )
+    )
+
+    if average_engineering_score >= 80:
+        performance_status = "Excellent"
+
+    elif average_engineering_score >= 65:
+        performance_status = "Good"
+
+    elif average_engineering_score >= 50:
+        performance_status = "Average"
+
+    else:
+        performance_status = "Needs Improvement"
+
+    return {
+        "batch": batch_name,
+        "total_students": total_students,
+
+        "average_engineering_score": round(
+            average_engineering_score,
+            2
+        ),
+
+        "average_attendance": round(
+            average_attendance,
+            2
+        ),
+
+        "total_projects": total_projects,
+        "approved_projects": approved_projects,
+        "pending_projects": pending_projects,
+        "rejected_projects": rejected_projects,
+
+        "project_approval_percentage": round(
+            project_approval_percentage,
+            2
+        ),
+
+        "placement_ready_students":
+            placement_ready_students,
+
+        "students_requiring_attention":
+            students_requiring_attention,
+
+        "performance_status":
+            performance_status
+    }
+
+def get_batch_comparison_report(
+    db: Session
+):
+    students = db.query(Student).all()
+
+    grouped_students = defaultdict(list)
+
+    for student in students:
+        batch_name = student.batch
+
+        if not batch_name:
+            batch_name = "Unassigned Batch"
+
+        grouped_students[batch_name].append(
+            student
+        )
+
+    batch_reports = []
+
+    for batch_name, batch_students in grouped_students.items():
+        batch_report = calculate_batch_performance(
+            batch_name=batch_name,
+            students=batch_students,
+            db=db
+        )
+
+        batch_reports.append(batch_report)
+
+    if not batch_reports:
+        return {
+            "total_batches": 0,
+            "strongest_batch": None,
+            "weakest_batch": None,
+            "highest_attendance_batch": None,
+            "highest_project_batch": None,
+            "highest_placement_batch": None,
+            "batches": [],
+            "ai_summary": (
+                "No batch performance data is currently available."
+            ),
+            "recommendations": [
+                "Add students with valid batch information and performance records."
+            ]
+        }
+
+    batch_reports.sort(
+        key=lambda item: (
+            item["average_engineering_score"],
+            item["project_approval_percentage"],
+            item["average_attendance"]
+        ),
+        reverse=True
+    )
+
+    strongest_batch = batch_reports[0]["batch"]
+
+    weakest_batch = min(
+        batch_reports,
+        key=lambda item: (
+            item["average_engineering_score"],
+            item["project_approval_percentage"],
+            item["average_attendance"]
+        )
+    )["batch"]
+
+    highest_attendance_batch = max(
+        batch_reports,
+        key=lambda item: (
+            item["average_attendance"],
+            item["average_engineering_score"]
+        )
+    )["batch"]
+
+    highest_project_batch = max(
+        batch_reports,
+        key=lambda item: (
+            item["approved_projects"],
+            item["project_approval_percentage"]
+        )
+    )["batch"]
+
+    highest_placement_batch = max(
+        batch_reports,
+        key=lambda item: (
+            item["placement_ready_students"],
+            item["average_engineering_score"]
+        )
+    )["batch"]
+
+    report_data = {
+        "total_batches": len(batch_reports),
+        "strongest_batch": strongest_batch,
+        "weakest_batch": weakest_batch,
+
+        "highest_attendance_batch":
+            highest_attendance_batch,
+
+        "highest_project_batch":
+            highest_project_batch,
+
+        "highest_placement_batch":
+            highest_placement_batch,
+
+        "batches": batch_reports
+    }
+
+    ai_result = generate_batch_comparison_ai_analysis(
+        report_data=report_data
+    )
+
+    return {
+        **report_data,
+        "ai_summary": ai_result["ai_summary"],
+        "recommendations":
+            ai_result["recommendations"]
+    }
+
+
+def generate_batch_comparison_ai_analysis(
+    report_data: dict
+):
+    prompt = f"""
+You are an AI performance analyst for an internship platform.
+
+Analyze the following batch comparison data:
+
+{json.dumps(report_data, indent=2)}
+
+Instructions:
+
+- Compare all internship batches.
+- Mention the strongest and weakest batch.
+- Evaluate attendance, engineering score, project approval
+  and placement readiness.
+- Identify batches requiring mentor support.
+- Provide exactly three practical recommendations.
+- Keep the summary concise and professional.
+- Return valid JSON only.
+- Do not include markdown.
+- Do not include text outside the JSON object.
+
+Required JSON format:
+
+{{
+    "ai_summary": "Short batch comparison summary",
+    "recommendations": [
+        "Recommendation one",
+        "Recommendation two",
+        "Recommendation three"
+    ]
+}}
+"""
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                }
+            ],
+
+            temperature=0.3,
+
+            response_format={
+                "type": "json_object"
+            }
+        )
+
+        result = json.loads(
+            completion.choices[0].message.content
+        )
+
+        return {
+            "ai_summary": result.get(
+                "ai_summary",
+                "Batch comparison generated successfully."
+            ),
+
+            "recommendations": result.get(
+                "recommendations",
+                []
+            )[:3]
+        }
+
+    except Exception:
+        return generate_batch_comparison_fallback(
+            report_data=report_data
+        )
+    
+
+def generate_batch_comparison_fallback(
+    report_data: dict
+):
+    strongest_batch = report_data[
+        "strongest_batch"
+    ]
+
+    weakest_batch = report_data[
+        "weakest_batch"
+    ]
+
+    highest_attendance_batch = report_data[
+        "highest_attendance_batch"
+    ]
+
+    highest_placement_batch = report_data[
+        "highest_placement_batch"
+    ]
+
+    summary = (
+        f"{strongest_batch} is currently the strongest "
+        f"performing batch, while {weakest_batch} requires "
+        f"additional mentor and technical support."
+    )
+
+    recommendations = [
+        (
+            f"Review performance gaps in {weakest_batch} "
+            f"and schedule focused mentor sessions."
+        ),
+        (
+            f"Study the attendance practices of "
+            f"{highest_attendance_batch} and apply them "
+            f"to weaker batches."
+        ),
+        (
+            f"Prepare placement-ready students from "
+            f"{highest_placement_batch} for interviews "
+            f"and client project evaluations."
+        )
+    ]
+
+    return {
+        "ai_summary": summary,
+        "recommendations": recommendations
+    }
+
+
+
+def get_placement_readiness_report(
+    db: Session
+):
+    students = db.query(Student).all()
+
+    placement_students = []
+
+    job_ready = 0
+    interview_ready = 0
+    client_ready = 0
+    needs_improvement = 0
+
+    for student in students:
+        performance = calculate_student_engineering_score(
+            student=student,
+            db=db
+        )
+
+        score = performance["engineering_score"]
+
+        attendance = performance[
+            "attendance_percentage"
+        ]
+
+        approved_projects = performance[
+            "approved_projects"
+        ]
+
+        if (
+            score >= 85
+            and attendance >= 90
+            and approved_projects >= 4
+        ):
+            placement_status = "Ready for Job"
+
+            recommended_action = (
+                "Recommend Job Placement"
+            )
+
+            job_ready += 1
+
+        elif (
+            score >= 75
+            and attendance >= 80
+            and approved_projects >= 3
+        ):
+            placement_status = (
+                "Ready for Interview"
+            )
+
+            recommended_action = (
+                "Recommend Interview"
+            )
+
+            interview_ready += 1
+
+        elif (
+            score >= 70
+            and attendance >= 75
+            and approved_projects >= 2
+        ):
+            placement_status = (
+                "Ready for Client Project"
+            )
+
+            recommended_action = (
+                "Assign Advanced Case Study"
+            )
+
+            client_ready += 1
+
+        else:
+            placement_status = (
+                "Needs Improvement"
+            )
+
+            recommended_action = (
+                "Schedule Mentor Meeting"
+            )
+
+            needs_improvement += 1
+
+        placement_students.append({
+            "student_id": student.id,
+            "student_name": student.name,
+            "engineering_score": score,
+            "attendance_percentage": attendance,
+            "approved_projects": approved_projects,
+            "placement_status": placement_status,
+            "recommended_action": recommended_action
+        })
+
+    placement_students.sort(
+        key=lambda item: (
+            item["engineering_score"],
+            item["approved_projects"],
+            item["attendance_percentage"]
+        ),
+        reverse=True
+    )
+
+    summary = {
+        "job_ready": job_ready,
+        "interview_ready": interview_ready,
+        "client_ready": client_ready,
+        "needs_improvement": needs_improvement
+    }
+
+    report_data = {
+        "summary": summary,
+        "students": placement_students
+    }
+
+    ai_result = (
+        generate_placement_readiness_ai_analysis(
+            report_data=report_data
+        )
+    )
+
+    return {
+        **report_data,
+        "ai_summary": ai_result["ai_summary"],
+        "recommendations":
+            ai_result["recommendations"]
+    }
+
+def generate_placement_readiness_ai_analysis(
+    report_data: dict
+):
+    compact_students = [
+        {
+            "student_name":
+                student["student_name"],
+
+            "engineering_score":
+                student["engineering_score"],
+
+            "attendance_percentage":
+                student["attendance_percentage"],
+
+            "approved_projects":
+                student["approved_projects"],
+
+            "placement_status":
+                student["placement_status"]
+        }
+        for student in report_data["students"]
+    ]
+
+    prompt_data = {
+        "summary": report_data["summary"],
+        "students": compact_students
+    }
+
+    prompt = f"""
+You are an AI placement readiness analyst for an internship platform.
+
+Analyze the following student placement readiness data:
+
+{json.dumps(prompt_data, indent=2)}
+
+Instructions:
+
+- Evaluate how many students are ready for jobs, interviews,
+  client projects or require improvement.
+- Identify major readiness gaps.
+- Mention whether the internship program has a strong hiring pipeline.
+- Provide exactly three practical recommendations.
+- Recommendations may include mock interviews, advanced case studies,
+  mentor meetings, technical assessments or job placement preparation.
+- Keep the summary concise and professional.
+- Return valid JSON only.
+- Do not include markdown.
+- Do not include text outside the JSON object.
+
+Required JSON format:
+
+{{
+    "ai_summary": "Short placement readiness summary",
+    "recommendations": [
+        "Recommendation one",
+        "Recommendation two",
+        "Recommendation three"
+    ]
+}}
+"""
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                }
+            ],
+
+            temperature=0.3,
+
+            response_format={
+                "type": "json_object"
+            }
+        )
+
+        result = json.loads(
+            completion.choices[0].message.content
+        )
+
+        return {
+            "ai_summary": result.get(
+                "ai_summary",
+                "Placement readiness report generated successfully."
+            ),
+
+            "recommendations": result.get(
+                "recommendations",
+                []
+            )[:3]
+        }
+
+    except Exception:
+        return (
+            generate_placement_readiness_fallback(
+                report_data=report_data
+            )
+        )
+
+
+def generate_placement_readiness_fallback(
+    report_data: dict
+):
+    summary_data = report_data["summary"]
+
+    job_ready = summary_data["job_ready"]
+
+    interview_ready = summary_data[
+        "interview_ready"
+    ]
+
+    client_ready = summary_data[
+        "client_ready"
+    ]
+
+    needs_improvement = summary_data[
+        "needs_improvement"
+    ]
+
+    total_students = (
+        job_ready
+        + interview_ready
+        + client_ready
+        + needs_improvement
+    )
+
+    ready_students = (
+        job_ready
+        + interview_ready
+        + client_ready
+    )
+
+    if total_students == 0:
+        return {
+            "ai_summary": (
+                "No student placement readiness data is available."
+            ),
+
+            "recommendations": [
+                "Add student performance records before generating placement analysis."
+            ]
+        }
+
+    readiness_percentage = (
+        ready_students / total_students
+    ) * 100
+
+    if readiness_percentage >= 75:
+        ai_summary = (
+            "The internship program has a strong placement pipeline, "
+            "with most students ready for jobs, interviews or client projects."
+        )
+
+    elif readiness_percentage >= 50:
+        ai_summary = (
+            "The internship program has moderate placement readiness, "
+            "but several students still require additional preparation."
+        )
+
+    else:
+        ai_summary = (
+            "The internship program requires stronger technical and "
+            "career preparation before most students are placement ready."
+        )
+
+    recommendations = []
+
+    if job_ready > 0:
+        recommendations.append(
+            "Connect job-ready interns with placement opportunities and final technical interviews."
+        )
+
+    if interview_ready > 0:
+        recommendations.append(
+            "Schedule mock interviews and communication practice for interview-ready interns."
+        )
+
+    if client_ready > 0:
+        recommendations.append(
+            "Assign advanced client-style projects to students ready for practical exposure."
+        )
+
+    if needs_improvement > 0:
+        recommendations.append(
+            "Create focused mentoring plans for students requiring improvement."
+        )
+
+    if len(recommendations) < 3:
+        recommendations.append(
+            "Review placement readiness every week using attendance, project and engineering performance."
+        )
+
+    return {
+        "ai_summary": ai_summary,
+        "recommendations":
+            recommendations[:3]
+    }

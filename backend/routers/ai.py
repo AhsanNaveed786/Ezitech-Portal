@@ -1,8 +1,40 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from backend.schemas import (
+    InternshipHealthResponse
+)
 
 from backend.schemas import (
+    BatchComparisonResponse
+)
+
+from backend.schemas import (
+    PlacementReadinessResponse
+)
+
+from backend.services.ai import (
+    get_placement_readiness_report
+)
+
+
+
+from backend.services.ai import (
+    get_batch_comparison_report
+)
+
+from backend.services.ai import (
+    get_overall_internship_health
+)
+from backend.schemas import (
     MentorSummaryReportResponse
+)
+
+from backend.schemas import (
+    ProductivityTrendsResponse
+)
+
+from backend.services.ai import (
+    get_productivity_trends_report
 )
 
 from backend.schemas import (
@@ -373,5 +405,65 @@ def technology_performance_report(
     db: Session = Depends(get_db)
 ):
     return get_technology_performance_report(
+        db=db
+    )
+
+
+@router.get(
+    "/reports/productivity-trends",
+    response_model=ProductivityTrendsResponse
+)
+def productivity_trends_report(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_productivity_trends_report(
+        db=db
+    )
+
+
+
+@router.get(
+    "/admin/internship-health",
+    response_model=InternshipHealthResponse
+)
+def overall_internship_health(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_overall_internship_health(
+        db=db
+    )
+
+@router.get(
+    "/admin/batch-comparison",
+    response_model=BatchComparisonResponse
+)
+def admin_batch_comparison(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_batch_comparison_report(
+        db=db
+    )
+
+
+@router.get(
+    "/admin/placement-readiness",
+    response_model=PlacementReadinessResponse
+)
+def admin_placement_readiness(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_placement_readiness_report(
         db=db
     )

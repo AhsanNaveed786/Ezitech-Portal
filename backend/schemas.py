@@ -374,3 +374,141 @@ class TechnologyPerformanceReportResponse(BaseModel):
 
     ai_summary: str
     recommendations: list[str]
+
+
+class ProductivityPeriodData(BaseModel):
+    period_start: str
+    period_end: str
+    average_attendance: float
+    total_projects: int
+    approved_projects: int
+    pending_projects: int
+    rejected_projects: int
+    project_approval_percentage: float
+    average_engineering_score: float
+
+
+class ProductivityTrendsResponse(BaseModel):
+    previous_period: ProductivityPeriodData
+    current_period: ProductivityPeriodData
+
+    attendance_change: float
+    project_submission_change: int
+    approved_project_change: int
+    engineering_score_change: float
+
+    attendance_trend: str
+    project_trend: str
+    approval_trend: str
+    engineering_trend: str
+
+    overall_productivity_status: str
+    ai_summary: str
+    recommendations: list[str]
+
+class InternshipHealthMetrics(BaseModel):
+    total_interns: int
+    active_interns: int
+    inactive_interns: int
+
+    average_engineering_score: float
+    average_attendance: float
+
+    total_projects: int
+    approved_projects: int
+    pending_projects: int
+    rejected_projects: int
+
+    project_approval_percentage: float
+    students_requiring_attention: int
+    placement_ready_interns: int
+
+
+class InternshipHealthResponse(BaseModel):
+    health_score: float
+    health_status: str
+
+    metrics: InternshipHealthMetrics
+
+    ai_summary: str
+    recommendations: list[str]
+
+
+class BatchPerformanceItem(BaseModel):
+    batch: str
+
+    total_students: int
+
+    average_engineering_score: float
+
+    average_attendance: float
+
+    total_projects: int
+
+    approved_projects: int
+
+    pending_projects: int
+
+    rejected_projects: int
+
+    project_approval_percentage: float
+
+    placement_ready_students: int
+
+    performance_status: str
+
+
+class BatchComparisonResponse(BaseModel):
+
+    total_batches: int
+
+    strongest_batch: str | None
+
+    weakest_batch: str | None
+
+    highest_attendance_batch: str | None
+
+    highest_project_batch: str | None
+
+    highest_placement_batch: str | None
+
+    batches: list[BatchPerformanceItem]
+
+    ai_summary: str
+
+    recommendations: list[str]
+
+
+
+class PlacementReadinessStudent(BaseModel):
+    student_id: int
+    student_name: str
+
+    engineering_score: int
+
+    attendance_percentage: float
+
+    approved_projects: int
+
+    placement_status: str
+
+    recommended_action: str
+
+
+class PlacementSummary(BaseModel):
+    job_ready: int
+    interview_ready: int
+    client_ready: int
+    needs_improvement: int
+
+
+class PlacementReadinessResponse(BaseModel):
+    summary: PlacementSummary
+
+    students: list[
+        PlacementReadinessStudent
+    ]
+
+    ai_summary: str
+
+    recommendations: list[str]
