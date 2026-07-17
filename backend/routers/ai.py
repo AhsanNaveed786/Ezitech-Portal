@@ -467,3 +467,26 @@ def admin_placement_readiness(
     return get_placement_readiness_report(
         db=db
     )
+
+from backend.schemas import (
+    AdminInsightsResponse
+)
+
+from backend.services.ai import (
+    get_admin_ai_insights
+)
+
+
+@router.get(
+    "/admin/insights",
+    response_model=AdminInsightsResponse
+)
+def admin_ai_insights(
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    return get_admin_ai_insights(
+        db=db
+    )

@@ -512,3 +512,18 @@ class PlacementReadinessResponse(BaseModel):
     ai_summary: str
 
     recommendations: list[str]
+
+
+class AdminInsightItem(BaseModel):
+    title: str
+    description: str
+    category: str
+    priority: str
+
+
+class AdminInsightsResponse(BaseModel):
+    total_insights: int
+    overall_status: str
+    insights: list[AdminInsightItem]
+    executive_summary: str
+    recommended_actions: list[str]

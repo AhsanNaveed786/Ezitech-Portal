@@ -5088,3 +5088,509 @@ def generate_placement_readiness_fallback(
         "recommendations":
             recommendations[:3]
     }
+
+
+
+def get_admin_ai_insights(
+    db: Session
+):
+    internship_health = get_overall_internship_health(
+        db=db
+    )
+
+    batch_comparison = get_batch_comparison_report(
+        db=db
+    )
+
+    placement_readiness = get_placement_readiness_report(
+        db=db
+    )
+
+    technology_performance = (
+        get_technology_performance_report(
+            db=db
+        )
+    )
+
+    productivity_trends = (
+        get_productivity_trends_report(
+            db=db
+        )
+    )
+
+    health_metrics = internship_health["metrics"]
+
+    insight_data = {
+        "internship_health": {
+            "health_score":
+                internship_health["health_score"],
+
+            "health_status":
+                internship_health["health_status"],
+
+            "total_interns":
+                health_metrics["total_interns"],
+
+            "active_interns":
+                health_metrics["active_interns"],
+
+            "inactive_interns":
+                health_metrics["inactive_interns"],
+
+            "average_engineering_score":
+                health_metrics[
+                    "average_engineering_score"
+                ],
+
+            "average_attendance":
+                health_metrics["average_attendance"],
+
+            "project_approval_percentage":
+                health_metrics[
+                    "project_approval_percentage"
+                ],
+
+            "students_requiring_attention":
+                health_metrics[
+                    "students_requiring_attention"
+                ],
+
+            "placement_ready_interns":
+                health_metrics[
+                    "placement_ready_interns"
+                ]
+        },
+
+        "batch_comparison": {
+            "strongest_batch":
+                batch_comparison["strongest_batch"],
+
+            "weakest_batch":
+                batch_comparison["weakest_batch"],
+
+            "highest_attendance_batch":
+                batch_comparison[
+                    "highest_attendance_batch"
+                ],
+
+            "highest_project_batch":
+                batch_comparison[
+                    "highest_project_batch"
+                ],
+
+            "highest_placement_batch":
+                batch_comparison[
+                    "highest_placement_batch"
+                ]
+        },
+
+        "placement_readiness":
+            placement_readiness["summary"],
+
+        "technology_performance": {
+            "strongest_technology":
+                technology_performance[
+                    "strongest_technology"
+                ],
+
+            "weakest_technology":
+                technology_performance[
+                    "weakest_technology"
+                ],
+
+            "total_technologies":
+                technology_performance[
+                    "total_technologies"
+                ]
+        },
+
+        "productivity_trends": {
+            "attendance_trend":
+                productivity_trends[
+                    "attendance_trend"
+                ],
+
+            "project_trend":
+                productivity_trends[
+                    "project_trend"
+                ],
+
+            "approval_trend":
+                productivity_trends[
+                    "approval_trend"
+                ],
+
+            "engineering_trend":
+                productivity_trends[
+                    "engineering_trend"
+                ],
+
+            "overall_productivity_status":
+                productivity_trends[
+                    "overall_productivity_status"
+                ]
+        }
+    }
+
+    ai_result = generate_admin_insights_ai_analysis(
+        insight_data=insight_data
+    )
+
+    return {
+        "total_insights": len(
+            ai_result["insights"]
+        ),
+
+        "overall_status":
+            internship_health["health_status"],
+
+        "insights":
+            ai_result["insights"],
+
+        "executive_summary":
+            ai_result["executive_summary"],
+
+        "recommended_actions":
+            ai_result["recommended_actions"]
+    }
+
+
+
+def generate_admin_insights_ai_analysis(
+    insight_data: dict
+):
+    prompt = f"""
+You are an executive AI analyst for an internship intelligence platform.
+
+Analyze the following platform data:
+
+{json.dumps(insight_data, indent=2)}
+
+Generate important executive insights for the admin dashboard.
+
+Rules:
+
+- Generate between 4 and 8 useful insights.
+- Every insight must be based on the provided data.
+- Do not invent student counts, percentages or trends.
+- Highlight major strengths, weaknesses, risks and opportunities.
+- Mention batch, technology, attendance, engineering,
+  productivity and placement readiness where relevant.
+- Category must be one of:
+  Performance, Attendance, Projects, Batch,
+  Technology, Placement, Productivity, Risk.
+- Priority must be High, Medium or Low.
+- Provide exactly three recommended actions.
+- Keep descriptions short and professional.
+- Return valid JSON only.
+- Do not include markdown.
+- Do not include text outside the JSON object.
+
+Required JSON format:
+
+{{
+    "executive_summary": "Short executive platform summary",
+
+    "insights": [
+        {{
+            "title": "Insight title",
+            "description": "Short data-based insight",
+            "category": "Performance",
+            "priority": "High"
+        }}
+    ],
+
+    "recommended_actions": [
+        "Action one",
+        "Action two",
+        "Action three"
+    ]
+}}
+"""
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                }
+            ],
+
+            temperature=0.25,
+
+            response_format={
+                "type": "json_object"
+            }
+        )
+
+        result = json.loads(
+            completion.choices[0].message.content
+        )
+
+        insights = result.get(
+            "insights",
+            []
+        )
+
+        recommended_actions = result.get(
+            "recommended_actions",
+            []
+        )
+
+        return {
+            "executive_summary": result.get(
+                "executive_summary",
+                "Admin AI insights generated successfully."
+            ),
+
+            "insights": insights[:8],
+
+            "recommended_actions":
+                recommended_actions[:3]
+        }
+
+    except Exception:
+        return generate_admin_insights_fallback(
+            insight_data=insight_data
+        )
+
+def generate_admin_insights_fallback(
+    insight_data: dict
+):
+    health = insight_data[
+        "internship_health"
+    ]
+
+    batch = insight_data[
+        "batch_comparison"
+    ]
+
+    placement = insight_data[
+        "placement_readiness"
+    ]
+
+    technology = insight_data[
+        "technology_performance"
+    ]
+
+    productivity = insight_data[
+        "productivity_trends"
+    ]
+
+    insights = []
+
+    if health["inactive_interns"] > 0:
+        insights.append({
+            "title": "Inactive interns detected",
+
+            "description": (
+                f"{health['inactive_interns']} interns "
+                "have no recent attendance or project activity."
+            ),
+
+            "category": "Risk",
+            "priority": "High"
+        })
+
+    if (
+        health["students_requiring_attention"]
+        > 0
+    ):
+        insights.append({
+            "title": "Students require support",
+
+            "description": (
+                f"{health['students_requiring_attention']} "
+                "interns require additional mentoring based "
+                "on attendance or engineering performance."
+            ),
+
+            "category": "Performance",
+            "priority": "High"
+        })
+
+    if health["average_attendance"] < 75:
+        insights.append({
+            "title": "Attendance below target",
+
+            "description": (
+                f"Average attendance is "
+                f"{health['average_attendance']}%, "
+                "which is below the expected level."
+            ),
+
+            "category": "Attendance",
+            "priority": "High"
+        })
+
+    if batch["strongest_batch"]:
+        insights.append({
+            "title": "Strongest performing batch",
+
+            "description": (
+                f"{batch['strongest_batch']} currently "
+                "has the strongest overall performance."
+            ),
+
+            "category": "Batch",
+            "priority": "Low"
+        })
+
+    if batch["weakest_batch"]:
+        insights.append({
+            "title": "Batch requires improvement",
+
+            "description": (
+                f"{batch['weakest_batch']} is currently "
+                "the weakest batch and may require "
+                "additional mentor support."
+            ),
+
+            "category": "Batch",
+            "priority": "Medium"
+        })
+
+    if technology["strongest_technology"]:
+        insights.append({
+            "title": "Strongest technology",
+
+            "description": (
+                f"{technology['strongest_technology']} "
+                "currently has the strongest project "
+                "approval performance."
+            ),
+
+            "category": "Technology",
+            "priority": "Low"
+        })
+
+    if technology["weakest_technology"]:
+        insights.append({
+            "title": "Technology performance risk",
+
+            "description": (
+                f"{technology['weakest_technology']} "
+                "requires additional training and "
+                "project review support."
+            ),
+
+            "category": "Technology",
+            "priority": "Medium"
+        })
+
+    if placement["job_ready"] > 0:
+        insights.append({
+            "title": "Job-ready interns available",
+
+            "description": (
+                f"{placement['job_ready']} interns "
+                "are currently ready for job placement."
+            ),
+
+            "category": "Placement",
+            "priority": "High"
+        })
+
+    if (
+        productivity[
+            "overall_productivity_status"
+        ]
+        in [
+            "Declining",
+            "Needs Immediate Attention"
+        ]
+    ):
+        insights.append({
+            "title": "Productivity is declining",
+
+            "description": (
+                "Current productivity trends show a decline "
+                "in one or more major performance indicators."
+            ),
+
+            "category": "Productivity",
+            "priority": "High"
+        })
+
+    if not insights:
+        insights.append({
+            "title": "Platform performance stable",
+
+            "description": (
+                "No major risks were detected in the "
+                "current internship performance data."
+            ),
+
+            "category": "Performance",
+            "priority": "Low"
+        })
+
+    if health["health_score"] >= 70:
+        executive_summary = (
+            "The internship platform is currently in a "
+            "healthy condition, with several opportunities "
+            "for placement and advanced student development."
+        )
+
+    elif health["health_score"] >= 50:
+        executive_summary = (
+            "The internship platform is stable, but some "
+            "performance, attendance and mentoring areas "
+            "require improvement."
+        )
+
+    else:
+        executive_summary = (
+            "The internship platform requires immediate "
+            "attention due to weak activity, attendance "
+            "or engineering performance."
+        )
+
+    recommended_actions = []
+
+    if health["inactive_interns"] > 0:
+        recommended_actions.append(
+            "Schedule follow-up meetings with inactive interns."
+        )
+
+    if (
+        health["students_requiring_attention"]
+        > 0
+    ):
+        recommended_actions.append(
+            "Create focused learning and mentoring plans for weak interns."
+        )
+
+    if placement["job_ready"] > 0:
+        recommended_actions.append(
+            "Schedule final interviews for job-ready interns."
+        )
+
+    if len(recommended_actions) < 3:
+        recommended_actions.append(
+            "Review weak batches and technologies with mentors."
+        )
+
+    if len(recommended_actions) < 3:
+        recommended_actions.append(
+            "Assign advanced case studies to top-performing interns."
+        )
+
+    if len(recommended_actions) < 3:
+        recommended_actions.append(
+            "Review platform performance metrics every week."
+        )
+
+    return {
+        "executive_summary":
+            executive_summary,
+
+        "insights":
+            insights[:8],
+
+        "recommended_actions":
+            recommended_actions[:3]
+    }
