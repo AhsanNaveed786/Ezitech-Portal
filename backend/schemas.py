@@ -527,3 +527,24 @@ class AdminInsightsResponse(BaseModel):
     insights: list[AdminInsightItem]
     executive_summary: str
     recommended_actions: list[str]
+
+
+from typing import Any
+from pydantic import BaseModel, Field
+
+
+class IntelligenceQueryRequest(BaseModel):
+    question: str = Field(
+        ...,
+        min_length=2,
+        max_length=500
+    )
+
+
+class IntelligenceQueryResponse(BaseModel):
+    question: str
+    intent: str
+    answer: str
+    confidence_score: float
+    data: Any | None = None
+    routing_method: str | None = None

@@ -18,7 +18,10 @@ def get_strongest_technology(
         db=db
     )
 
-    technologies = report["technologies"]
+    technologies = report.get(
+        "technologies",
+        []
+    )
 
     confidence_score = calculate_confidence_score(
         total_records=len(technologies),
@@ -29,16 +32,22 @@ def get_strongest_technology(
         answer = (
             "No technology performance data is available."
         )
-
         data = None
 
     else:
-        data = technologies[0]
+        data = max(
+            technologies,
+            key=lambda item: (
+                item.get("approval_percentage", 0),
+                item.get("approved_projects", 0),
+                item.get("total_projects", 0)
+            )
+        )
 
         answer = (
             f"{data['technology']} is currently the strongest "
             f"technology with a project approval rate of "
-            f"{data['project_approval_percentage']}%."
+            f"{data['approval_percentage']}%."
         )
 
     return build_intelligence_response(
@@ -58,7 +67,10 @@ def get_weakest_technology(
         db=db
     )
 
-    technologies = report["technologies"]
+    technologies = report.get(
+        "technologies",
+        []
+    )
 
     confidence_score = calculate_confidence_score(
         total_records=len(technologies),
@@ -69,16 +81,22 @@ def get_weakest_technology(
         answer = (
             "No technology performance data is available."
         )
-
         data = None
 
     else:
-        data = technologies[-1]
+        data = min(
+            technologies,
+            key=lambda item: (
+                item.get("approval_percentage", 0),
+                item.get("approved_projects", 0),
+                item.get("total_projects", 0)
+            )
+        )
 
         answer = (
             f"{data['technology']} currently has the "
             f"lowest project approval rate of "
-            f"{data['project_approval_percentage']}%."
+            f"{data['approval_percentage']}%."
         )
 
     return build_intelligence_response(
@@ -98,12 +116,25 @@ def get_technology_rankings(
         db=db
     )
 
-    technologies = report["technologies"]
+    technologies = report.get(
+        "technologies",
+        []
+    )
+
+    sorted_technologies = sorted(
+        technologies,
+        key=lambda item: (
+            item.get("approval_percentage", 0),
+            item.get("approved_projects", 0),
+            item.get("total_projects", 0)
+        ),
+        reverse=True
+    )
 
     rankings = []
 
     for index, technology in enumerate(
-        technologies,
+        sorted_technologies,
         start=1
     ):
         rankings.append({
@@ -124,8 +155,8 @@ def get_technology_rankings(
     else:
         answer = (
             f"{len(rankings)} technologies were ranked "
-            f"using engineering performance and "
-            f"project approval rate."
+            f"using project approval rate, approved projects "
+            f"and total project volume."
         )
 
     return build_intelligence_response(
@@ -145,7 +176,10 @@ def get_highest_completion_technology(
         db=db
     )
 
-    technologies = report["technologies"]
+    technologies = report.get(
+        "technologies",
+        []
+    )
 
     confidence_score = calculate_confidence_score(
         total_records=len(technologies),
@@ -156,22 +190,24 @@ def get_highest_completion_technology(
         answer = (
             "No technology completion data is available."
         )
-
         data = None
 
     else:
         data = max(
             technologies,
             key=lambda item: (
-                item["approved_projects"],
-                item["project_approval_percentage"]
+                item.get("approved_projects", 0),
+                item.get("approval_percentage", 0),
+                item.get("total_projects", 0)
             )
         )
 
         answer = (
             f"{data['technology']} currently has the "
             f"highest project completion performance with "
-            f"{data['approved_projects']} approved projects."
+            f"{data['approved_projects']} approved projects "
+            f"and an approval rate of "
+            f"{data['approval_percentage']}%."
         )
 
     return build_intelligence_response(
