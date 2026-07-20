@@ -195,4 +195,5 @@ http://127.0.0.1:8000/docs
 - Email Notifications
 - Deployment with Docker
 
-## Author
+## Implementation of Ai Agents in 
+all dashboards
