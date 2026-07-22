@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 from datetime import date
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 class StudentRegistration(BaseModel):
     name: str
@@ -528,18 +531,12 @@ class AdminInsightsResponse(BaseModel):
     executive_summary: str
     recommended_actions: list[str]
 
-
-from typing import Any
-from pydantic import BaseModel, Field
-
-
 class IntelligenceQueryRequest(BaseModel):
     question: str = Field(
         ...,
         min_length=2,
         max_length=500
     )
-
 
 class IntelligenceQueryResponse(BaseModel):
     question: str
@@ -548,3 +545,36 @@ class IntelligenceQueryResponse(BaseModel):
     confidence_score: float
     data: Any | None = None
     routing_method: str | None = None
+
+
+class GitHubReportRequest(BaseModel):
+    repository_limit: int = Field(
+        default=5,
+        ge=1,
+        le=10
+    )
+
+    ai_repository_limit: int = Field(
+        default=2,
+        ge=1,
+        le=5
+    )
+
+    commit_limit: int = Field(
+        default=30,
+        ge=1,
+        le=100
+    )
+
+    max_files_per_repository: int = Field(
+        default=8,
+        ge=1,
+        le=20
+    )
+
+
+class GitHubReportResponse(BaseModel):
+    student_id: int
+    student_name: str
+    github_username: str
+    report: dict[str, Any]

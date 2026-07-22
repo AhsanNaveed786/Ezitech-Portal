@@ -13,11 +13,15 @@ from backend.routers.dashboard import router as dashboard_router
 from backend.routers.leave import router as leave_router
 from backend.routers.project import router as project_router
 from backend.routers.ai import router as ai_router
+from backend.routers import github_report
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 app.include_router(
     intelligence.router
+)
+app.include_router(
+    github_report.router
 )
 app.include_router(auth_router)
 app.include_router(attendance_router)
