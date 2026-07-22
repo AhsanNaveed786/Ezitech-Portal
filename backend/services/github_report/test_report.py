@@ -11,7 +11,7 @@ async def main():
     analyzer = GitHubRepositoryAnalyzer()
 
     github_data = await collector.collect_student_github_data(
-        username="student_username",
+        username="AhsanNaveed786",
         repository_limit=5,
         commit_limit=30
     )
