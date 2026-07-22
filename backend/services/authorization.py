@@ -138,7 +138,6 @@ def register_admin(admin: AdminRegistration, db: Session):
         email=admin.email,
         password=hash_password(admin.password),
         phone_number=admin.phone_number,
-        department=admin.department,
         gender=admin.gender
     )
 
