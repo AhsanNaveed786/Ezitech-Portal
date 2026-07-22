@@ -1,7 +1,9 @@
 import os
+from pathlib import Path
 from typing import Any
 
 import httpx
+from dotenv import load_dotenv
 
 from backend.services.github_report.exceptions import (
     GitHubAPIError,
@@ -9,6 +11,17 @@ from backend.services.github_report.exceptions import (
     GitHubRateLimitError,
     GitHubRepositoryNotFoundError,
     GitHubUserNotFoundError
+)
+
+
+# Project root:
+# Ezitech Portal/
+BASE_DIR = Path(__file__).resolve().parents[3]
+
+# Project root ki .env file load karega
+load_dotenv(
+    dotenv_path=BASE_DIR / ".env",
+    override=True
 )
 
 
@@ -20,18 +33,29 @@ class GitHubClient:
         token: str | None = None,
         timeout: float = 20.0
     ):
-        self.token = token or os.getenv("GITHUB_TOKEN")
+        loaded_token = (
+            token
+            or os.getenv("GITHUB_TOKEN")
+        )
+
+        self.token = (
+            loaded_token.strip()
+            if loaded_token
+            else None
+        )
+
+        if not self.token:
+            raise GitHubAuthenticationError(
+                "GITHUB_TOKEN is missing. "
+                "Add it to the project root .env file."
+            )
 
         self.headers = {
             "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {self.token}",
             "X-GitHub-Api-Version": "2026-03-10",
             "User-Agent": "Ezitech-AI-Mentor-Platform"
         }
-
-        if self.token:
-            self.headers["Authorization"] = (
-                f"Bearer {self.token}"
-            )
 
         self.timeout = httpx.Timeout(
             timeout=timeout,
@@ -76,7 +100,7 @@ class GitHubClient:
 
         except ValueError as error:
             raise GitHubAPIError(
-                "GitHub API returned an invalid response."
+                "GitHub API returned an invalid JSON response."
             ) from error
 
     def _handle_response_errors(
@@ -94,7 +118,8 @@ class GitHubClient:
         if response.status_code == 401:
             raise GitHubAuthenticationError(
                 "GitHub authentication failed. "
-                "Check your GITHUB_TOKEN."
+                "The token is invalid, expired, revoked, "
+                "or Python loaded the wrong token."
             )
 
         if response.status_code == 403:
@@ -113,7 +138,7 @@ class GitHubClient:
                 )
 
             raise GitHubAuthenticationError(
-                f"GitHub API access forbidden: {message}"
+                f"GitHub API access was forbidden: {message}"
             )
 
         if response.status_code == 404:
@@ -124,7 +149,7 @@ class GitHubClient:
 
             if endpoint.startswith("/repos/"):
                 raise GitHubRepositoryNotFoundError(
-                    "GitHub repository or resource "
+                    "GitHub repository or requested resource "
                     "was not found."
                 )
 
@@ -148,6 +173,7 @@ class GitHubClient:
             )
 
         except ValueError:
-            return response.text or (
-                "Unknown GitHub API error"
+            return (
+                response.text
+                or "Unknown GitHub API error"
             )
