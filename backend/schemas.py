@@ -1,7 +1,15 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import date
 from typing import Any
+from datetime import date, datetime
+from typing import Literal
 
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_validator
+)
 from pydantic import BaseModel, Field
 from datetime import date, datetime
 from typing import Any, Literal
@@ -930,3 +938,191 @@ class DailyActivitySummaryResponse(BaseModel):
     total_hours_worked: float
     average_hours_per_record: float
     activity_submission_rate: float
+
+
+class TaskCreate(BaseModel):
+    student_id: int = Field(
+        ...,
+        ge=1
+    )
+
+    title: str = Field(
+        ...,
+        min_length=3,
+        max_length=200
+    )
+
+    description: str = Field(
+        ...,
+        min_length=10,
+        max_length=5000
+    )
+
+    difficulty_level: Literal[
+        "Easy",
+        "Medium",
+        "Advanced"
+    ] = "Medium"
+
+    priority: Literal[
+        "Low",
+        "Medium",
+        "High",
+        "Critical"
+    ] = "Medium"
+
+    start_date: date
+    due_date: date
+
+    @model_validator(mode="after")
+    def validate_task_dates(self):
+        if self.due_date < self.start_date:
+            raise ValueError(
+                "Due date cannot be earlier than start date."
+            )
+
+        return self
+
+
+class TaskProgressUpdate(BaseModel):
+    progress_percentage: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    status: Literal[
+        "In Progress",
+        "Blocked"
+    ]
+
+    blockers: str | None = Field(
+        default=None,
+        max_length=2000
+    )
+
+
+class TaskSubmissionRequest(BaseModel):
+    github_repository_url: str = Field(
+        ...,
+        min_length=10,
+        max_length=500
+    )
+
+    github_commit_url: str | None = Field(
+        default=None,
+        max_length=500
+    )
+
+    submission_notes: str = Field(
+        ...,
+        min_length=10,
+        max_length=3000
+    )
+
+
+class TaskReviewRequest(BaseModel):
+    decision: Literal[
+        "Approved",
+        "Rejected"
+    ]
+
+    completion_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    mentor_feedback: str = Field(
+        ...,
+        min_length=5,
+        max_length=3000
+    )
+
+
+class TaskResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    title: str
+    description: str
+
+    student_id: int
+    assigned_by_mentor_id: int | None = None
+
+    difficulty_level: str
+    priority: str
+    status: str
+
+    progress_percentage: float
+
+    assigned_at: datetime
+    start_date: date
+    due_date: date
+
+    started_at: datetime | None = None
+    submitted_at: datetime | None = None
+    completed_at: datetime | None = None
+    reviewed_at: datetime | None = None
+
+    github_repository_url: str | None = None
+    github_commit_url: str | None = None
+    submission_notes: str | None = None
+
+    blockers: str | None = None
+    mentor_feedback: str | None = None
+    completion_score: float | None = None
+
+    deadline_status: str
+    days_late: int
+
+
+class TaskListResponse(BaseModel):
+    total_records: int
+    tasks: list[TaskResponse]
+
+
+class OverdueTaskItem(BaseModel):
+    task_id: int
+    title: str
+
+    student_id: int
+    student_name: str
+    mentor_id: int | None = None
+
+    due_date: date
+    status: str
+    progress_percentage: float
+
+    days_overdue: int
+    difficulty_level: str
+    priority: str
+
+
+class OverdueTasksResponse(BaseModel):
+    total_overdue_tasks: int
+    overdue_tasks: list[OverdueTaskItem]
+
+
+class TaskSummaryResponse(BaseModel):
+    period_days: int
+    total_tasks: int
+
+    assigned_tasks: int
+    in_progress_tasks: int
+    blocked_tasks: int
+    submitted_tasks: int
+    approved_tasks: int
+    rejected_tasks: int
+    overdue_tasks: int
+
+    on_time_completions: int
+    late_completions: int
+
+    average_completion_score: float
+    average_progress_percentage: float
+
+    task_completion_rate: float
+    deadline_compliance_rate: float

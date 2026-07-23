@@ -14,11 +14,15 @@ from backend.routers.leave import router as leave_router
 from backend.routers.project import router as project_router
 from backend.routers.ai import router as ai_router
 from backend.routers import github_report
+from backend.routers import task_management
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 app.include_router(
     intelligence.router
+)
+app.include_router(
+    task_management.router
 )
 app.include_router(
     github_report.router

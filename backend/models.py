@@ -15,6 +15,20 @@ from sqlalchemy import (
     func
 )
 
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func
+)
+
 
 from sqlalchemy import (
     Column,
@@ -642,4 +656,184 @@ class DailyActivity(Base):
     verified_at = Column(
         DateTime,
         nullable=True
+    )
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    __table_args__ = (
+        CheckConstraint(
+            "progress_percentage >= 0 "
+            "AND progress_percentage <= 100",
+            name="check_task_progress_percentage"
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    title = Column(
+        String(200),
+        nullable=False
+    )
+
+    description = Column(
+        Text,
+        nullable=False
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    assigned_by_mentor_id = Column(
+        Integer,
+        ForeignKey(
+            "mentors.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    difficulty_level = Column(
+        Enum(
+            "Easy",
+            "Medium",
+            "Advanced",
+            name="task_difficulty_enum"
+        ),
+        nullable=False,
+        default="Medium"
+    )
+
+    priority = Column(
+        Enum(
+            "Low",
+            "Medium",
+            "High",
+            "Critical",
+            name="task_priority_enum"
+        ),
+        nullable=False,
+        default="Medium"
+    )
+
+    status = Column(
+        Enum(
+            "Assigned",
+            "In Progress",
+            "Completed",
+            "Blocked",
+            "Submitted",
+            "Approved",
+            "Rejected",
+            "Overdue",
+            "Cancelled",
+            name="task_status_enum"
+        ),
+        nullable=False,
+        default="Assigned",
+        index=True
+    )
+
+    progress_percentage = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    assigned_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now()
+    )
+
+    start_date = Column(
+        Date,
+        nullable=False
+    )
+
+    due_date = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    started_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    submitted_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    completed_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    reviewed_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    github_repository_url = Column(
+        String(500),
+        nullable=True
+    )
+
+    github_commit_url = Column(
+        String(500),
+        nullable=True
+    )
+
+    submission_notes = Column(
+        Text,
+        nullable=True
+    )
+
+    blockers = Column(
+        Text,
+        nullable=True
+    )
+
+    mentor_feedback = Column(
+        Text,
+        nullable=True
+    )
+
+    completion_score = Column(
+        Float,
+        nullable=True
+    )
+
+    deadline_status = Column(
+        Enum(
+            "Pending",
+            "On Time",
+            "Late",
+            "Overdue",
+            name="deadline_status_enum"
+        ),
+        nullable=False,
+        default="Pending",
+        index=True
+    )
+
+    days_late = Column(
+        Integer,
+        nullable=False,
+        default=0
     )
