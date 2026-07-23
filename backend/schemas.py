@@ -1976,3 +1976,444 @@ class LearningCreditSummaryResponse(BaseModel):
     total_positive_credits: int
     total_penalty_credits: int
     net_engineering_credits: int
+
+
+class EngineeringScoreGenerateRequest(BaseModel):
+    student_id: int = Field(
+        ...,
+        ge=1
+    )
+
+    period_start: date
+    period_end: date
+
+    @model_validator(mode="after")
+    def validate_period(self):
+        if self.period_end < self.period_start:
+            raise ValueError(
+                "Period end cannot be earlier than period start."
+            )
+
+        period_length = (
+            self.period_end - self.period_start
+        ).days
+
+        if period_length > 365:
+            raise ValueError(
+                "Engineering score period cannot exceed 365 days."
+            )
+
+        return self
+
+
+class EngineeringScoreResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    student_id: int
+
+    generated_by_mentor_id: int | None = None
+    generated_by_admin_id: int | None = None
+
+    period_start: date
+    period_end: date
+
+    attendance_score: float
+    github_score: float
+    daily_activity_score: float
+    task_score: float
+    case_study_score: float
+    mentor_feedback_score: float
+    communication_score: float
+    deadline_compliance_score: float
+    learning_speed_score: float
+    engineering_credit_score: float
+
+    final_engineering_score: float
+    performance_level: str
+
+    placement_readiness: bool
+    promotion_readiness: bool
+    client_project_readiness: bool
+    certificate_eligibility: bool
+
+    data_completeness_percentage: float
+
+    strong_areas: list[str]
+    weak_areas: list[str]
+    recommendations: list[str]
+
+    component_details: dict[str, Any]
+
+    generated_at: datetime
+
+
+class EngineeringScoreListResponse(BaseModel):
+    total_records: int
+    records: list[EngineeringScoreResponse]
+
+
+class EngineeringRankingItem(BaseModel):
+    rank: int
+
+    student_id: int
+    student_name: str
+    batch: str | None = None
+
+    final_engineering_score: float
+    performance_level: str
+
+    placement_readiness: bool
+    promotion_readiness: bool
+    client_project_readiness: bool
+    certificate_eligibility: bool
+
+    data_completeness_percentage: float
+
+    period_start: date
+    period_end: date
+
+
+class EngineeringRankingResponse(BaseModel):
+    total_students: int
+    rankings: list[EngineeringRankingItem]
+
+
+class EngineeringReadinessItem(BaseModel):
+    student_id: int
+    student_name: str
+    batch: str | None = None
+
+    final_engineering_score: float
+    performance_level: str
+
+    placement_readiness: bool
+    promotion_readiness: bool
+    client_project_readiness: bool
+    certificate_eligibility: bool
+
+    strong_areas: list[str]
+    weak_areas: list[str]
+
+
+class EngineeringReadinessResponse(BaseModel):
+    readiness_type: str
+    total_students: int
+    students: list[EngineeringReadinessItem]
+
+
+class EngineeringPerformanceSummaryResponse(BaseModel):
+    total_students_scored: int
+
+    excellent_students: int
+    good_students: int
+    average_students: int
+    weak_students: int
+    insufficient_data_students: int
+
+    placement_ready_students: int
+    promotion_ready_students: int
+    client_project_ready_students: int
+    certificate_eligible_students: int
+
+    average_engineering_score: float
+    average_data_completeness: float
+
+    highest_engineering_score: float
+    lowest_engineering_score: float
+
+
+class AIRecommendationGenerateRequest(BaseModel):
+    student_id: int = Field(
+        ...,
+        ge=1
+    )
+
+    engineering_performance_record_id: int | None = Field(
+        default=None,
+        ge=1
+    )
+
+
+class AIRecommendationStatusUpdate(BaseModel):
+    status: Literal[
+        "Pending Approval",
+        "Approved",
+        "Rejected"
+    ]
+
+    review_notes: str | None = Field(
+        default=None,
+        max_length=5000
+    )
+
+
+class AIRecommendationCompletionRequest(BaseModel):
+    completion_notes: str = Field(
+        ...,
+        min_length=5,
+        max_length=5000
+    )
+
+
+class AIRecommendationResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+
+    student_id: int
+    mentor_id: int | None = None
+    engineering_performance_record_id: int
+
+    recommendation_type: str
+    category: str
+
+    title: str
+    recommendation_reason: str
+    recommended_action: str
+
+    confidence_score: float
+    priority_score: float
+    priority_level: str
+
+    status: str
+
+    supporting_data: dict[str, Any]
+    weak_areas: list[str]
+    strong_areas: list[str]
+
+    requires_human_review: bool
+
+    generated_at: datetime
+    submitted_for_approval_at: datetime | None = None
+
+    reviewed_by_admin_id: int | None = None
+    reviewed_at: datetime | None = None
+    review_notes: str | None = None
+
+    completed_at: datetime | None = None
+    completion_notes: str | None = None
+
+
+class AIRecommendationListResponse(BaseModel):
+    total_records: int
+    recommendations: list[
+        AIRecommendationResponse
+    ]
+
+
+class AIRecommendationGenerationResponse(BaseModel):
+    student_id: int
+    engineering_performance_record_id: int
+    total_generated: int
+    recommendations: list[
+        AIRecommendationResponse
+    ]
+
+
+class AIRecommendationSummaryResponse(BaseModel):
+    total_recommendations: int
+
+    generated_recommendations: int
+    pending_approval_recommendations: int
+    approved_recommendations: int
+    rejected_recommendations: int
+    completed_recommendations: int
+
+    critical_priority: int
+    high_priority: int
+    medium_priority: int
+    low_priority: int
+
+    promote_intern: int
+    advanced_case_study: int
+    easier_case_study: int
+    mentor_meeting: int
+    interview_recommendations: int
+    job_placement_recommendations: int
+    internship_extensions: int
+    certificate_recommendations: int
+
+    average_confidence_score: float
+
+
+class RecommendationStudentItem(BaseModel):
+    student_id: int
+    student_name: str
+    batch: str | None = None
+
+    recommendation_id: int
+    recommendation_type: str
+
+    confidence_score: float
+    priority_level: str
+    status: str
+
+    final_engineering_score: float
+    generated_at: datetime
+
+
+class RecommendationStudentListResponse(BaseModel):
+    recommendation_type: str
+    total_students: int
+    students: list[
+        RecommendationStudentItem
+    ]
+
+
+class PerformanceReportGenerateRequest(BaseModel):
+    report_type: Literal[
+        "Weekly Engineering Report",
+        "Monthly Growth Report",
+        "Mentor Summary",
+        "Team Performance",
+        "Technology Performance",
+        "Productivity Trends"
+    ]
+
+    period_start: date
+    period_end: date
+
+    student_id: int | None = Field(
+        default=None,
+        ge=1
+    )
+
+    mentor_id: int | None = Field(
+        default=None,
+        ge=1
+    )
+
+    batch: str | None = Field(
+        default=None,
+        max_length=100
+    )
+
+    technology: str | None = Field(
+        default=None,
+        max_length=100
+    )
+
+    @model_validator(mode="after")
+    def validate_period(self):
+        if self.period_end < self.period_start:
+            raise ValueError(
+                "Period end cannot be earlier than period start."
+            )
+
+        if (
+            self.period_end - self.period_start
+        ).days > 365:
+            raise ValueError(
+                "Report period cannot exceed 365 days."
+            )
+
+        if (
+            self.report_type == "Mentor Summary"
+            and self.mentor_id is None
+        ):
+            raise ValueError(
+                "Mentor ID is required for a mentor summary."
+            )
+
+        if (
+            self.report_type == "Technology Performance"
+            and not self.technology
+        ):
+            raise ValueError(
+                "Technology is required for a technology report."
+            )
+
+        return self
+
+
+class PerformanceReportResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    report_type: str
+    title: str
+
+    period_start: date
+    period_end: date
+
+    student_id: int | None = None
+    mentor_id: int | None = None
+    batch: str | None = None
+
+    generated_by_role: str
+    generated_by_user_id: int | None = None
+
+    summary: dict[str, Any]
+    charts: list[dict[str, Any]]
+    insights: list[str]
+    supporting_data: dict[str, Any]
+
+    generated_at: datetime
+
+
+class PerformanceReportListResponse(BaseModel):
+    total_records: int
+    reports: list[PerformanceReportResponse]
+
+
+class StudentDashboardResponse(BaseModel):
+    student: dict[str, Any]
+    engineering_performance: dict[str, Any]
+    skill_growth: dict[str, Any]
+    attendance: dict[str, Any]
+    github: dict[str, Any]
+    daily_activity: dict[str, Any]
+    tasks: dict[str, Any]
+    case_studies: dict[str, Any]
+    mentor_feedback: dict[str, Any]
+    engineering_credits: dict[str, Any]
+    ai_recommendations: list[dict[str, Any]]
+    strong_areas: list[str]
+    weak_areas: list[str]
+    next_suggested_action: str
+
+
+class MentorDashboardResponse(BaseModel):
+    mentor: dict[str, Any]
+    team_overview: dict[str, Any]
+    top_performers: list[dict[str, Any]]
+    weak_performers: list[dict[str, Any]]
+    inactive_students: list[dict[str, Any]]
+    pending_tasks: list[dict[str, Any]]
+    pending_case_studies: list[dict[str, Any]]
+    pending_recommendations: list[dict[str, Any]]
+    team_growth: dict[str, Any]
+
+
+class AdminDashboardResponse(BaseModel):
+    internship_health: dict[str, Any]
+    performance_distribution: dict[str, Any]
+    readiness: dict[str, Any]
+    batch_comparison: list[dict[str, Any]]
+    technology_performance: list[dict[str, Any]]
+    mentor_performance: list[dict[str, Any]]
+    top_performers: list[dict[str, Any]]
+    weak_performers: list[dict[str, Any]]
+    inactive_students: list[dict[str, Any]]
+    recommendation_summary: dict[str, Any]
+    productivity_trends: list[dict[str, Any]]
+
+
+class CEODashboardResponse(BaseModel):
+    executive_summary: dict[str, Any]
+    hiring_readiness: dict[str, Any]
+    internship_health: dict[str, Any]
+    top_interns: list[dict[str, Any]]
+    mentors_needing_support: list[dict[str, Any]]
+    underperforming_technologies: list[dict[str, Any]]
+    batch_performance: list[dict[str, Any]]
+    risks: list[dict[str, Any]]
+    strategic_insights: list[str]
+    charts: list[dict[str, Any]]

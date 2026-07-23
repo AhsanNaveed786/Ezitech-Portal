@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -238,9 +238,39 @@ class CEO(Base):
 class Attendance(Base):
     __tablename__ = "attendance"
 
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "date",
+            name="uq_student_attendance_date"
+        ),
+
+        UniqueConstraint(
+            "mentor_id",
+            "date",
+            name="uq_mentor_attendance_date"
+        ),
+
+        CheckConstraint(
+            """
+            (
+                student_id IS NOT NULL
+                AND mentor_id IS NULL
+            )
+            OR
+            (
+                student_id IS NULL
+                AND mentor_id IS NOT NULL
+            )
+            """,
+            name="check_attendance_owner"
+        ),
+    )
+
     id = Column(
         Integer,
-        primary_key=True
+        primary_key=True,
+        index=True
     )
 
     student_id = Column(
@@ -249,7 +279,8 @@ class Attendance(Base):
             "students.id",
             ondelete="CASCADE"
         ),
-        nullable=True
+        nullable=True,
+        index=True
     )
 
     mentor_id = Column(
@@ -258,12 +289,14 @@ class Attendance(Base):
             "mentors.id",
             ondelete="CASCADE"
         ),
-        nullable=True
+        nullable=True,
+        index=True
     )
 
     date = Column(
         Date,
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     status = Column(
@@ -272,19 +305,20 @@ class Attendance(Base):
             "Absent",
             name="attendance_enum"
         ),
-        nullable=False
+        nullable=False,
+        default="Present",
+        index=True
     )
 
     checked_in_time = Column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=True
     )
 
     checked_out_time = Column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=True
     )
-
 
 class Leave(Base):
     __tablename__ = "leaves"
@@ -1656,6 +1690,585 @@ class EngineeringCredit(Base):
     )
 
     awarded_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True
+    )
+
+class EngineeringPerformanceRecord(Base):
+    __tablename__ = "engineering_performance_records"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "period_start",
+            "period_end",
+            name="uq_engineering_performance_period"
+        ),
+
+        CheckConstraint(
+            "attendance_score >= 0 "
+            "AND attendance_score <= 100",
+            name="check_engineering_attendance_score"
+        ),
+
+        CheckConstraint(
+            "github_score >= 0 "
+            "AND github_score <= 100",
+            name="check_engineering_github_score"
+        ),
+
+        CheckConstraint(
+            "daily_activity_score >= 0 "
+            "AND daily_activity_score <= 100",
+            name="check_engineering_activity_score"
+        ),
+
+        CheckConstraint(
+            "task_score >= 0 "
+            "AND task_score <= 100",
+            name="check_engineering_task_score"
+        ),
+
+        CheckConstraint(
+            "case_study_score >= 0 "
+            "AND case_study_score <= 100",
+            name="check_engineering_case_score"
+        ),
+
+        CheckConstraint(
+            "mentor_feedback_score >= 0 "
+            "AND mentor_feedback_score <= 100",
+            name="check_engineering_feedback_score"
+        ),
+
+        CheckConstraint(
+            "communication_score >= 0 "
+            "AND communication_score <= 100",
+            name="check_engineering_communication_score"
+        ),
+
+        CheckConstraint(
+            "deadline_compliance_score >= 0 "
+            "AND deadline_compliance_score <= 100",
+            name="check_engineering_deadline_score"
+        ),
+
+        CheckConstraint(
+            "learning_speed_score >= 0 "
+            "AND learning_speed_score <= 100",
+            name="check_engineering_learning_score"
+        ),
+
+        CheckConstraint(
+            "engineering_credit_score >= 0 "
+            "AND engineering_credit_score <= 100",
+            name="check_engineering_credit_score"
+        ),
+
+        CheckConstraint(
+            "final_engineering_score >= 0 "
+            "AND final_engineering_score <= 100",
+            name="check_final_engineering_score"
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    generated_by_mentor_id = Column(
+        Integer,
+        ForeignKey(
+            "mentors.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    generated_by_admin_id = Column(
+        Integer,
+        ForeignKey(
+            "admins.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    period_start = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    period_end = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    attendance_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    github_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    daily_activity_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    task_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    case_study_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    mentor_feedback_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    communication_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    deadline_compliance_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    learning_speed_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    engineering_credit_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    final_engineering_score = Column(
+        Float,
+        nullable=False,
+        default=0.0,
+        index=True
+    )
+
+    performance_level = Column(
+        Enum(
+            "Excellent",
+            "Good",
+            "Average",
+            "Weak",
+            "Insufficient Data",
+            name="engineering_performance_level_enum"
+        ),
+        nullable=False,
+        default="Insufficient Data",
+        index=True
+    )
+
+    placement_readiness = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        index=True
+    )
+
+    promotion_readiness = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        index=True
+    )
+
+    client_project_readiness = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        index=True
+    )
+
+    certificate_eligibility = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        index=True
+    )
+
+    data_completeness_percentage = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    strong_areas = Column(
+        JSONB,
+        nullable=False,
+        default=list
+    )
+
+    weak_areas = Column(
+        JSONB,
+        nullable=False,
+        default=list
+    )
+
+    recommendations = Column(
+        JSONB,
+        nullable=False,
+        default=list
+    )
+
+    component_details = Column(
+        JSONB,
+        nullable=False,
+        default=dict
+    )
+
+    generated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True
+    )
+
+class AIRecommendation(Base):
+    __tablename__ = "ai_recommendations"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "engineering_performance_record_id",
+            "recommendation_type",
+            name="uq_student_performance_recommendation"
+        ),
+
+        CheckConstraint(
+            "confidence_score >= 0 "
+            "AND confidence_score <= 100",
+            name="check_recommendation_confidence"
+        ),
+
+        CheckConstraint(
+            "priority_score >= 0 "
+            "AND priority_score <= 100",
+            name="check_recommendation_priority"
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    mentor_id = Column(
+        Integer,
+        ForeignKey(
+            "mentors.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    engineering_performance_record_id = Column(
+        Integer,
+        ForeignKey(
+            "engineering_performance_records.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    recommendation_type = Column(
+        Enum(
+            "Promote Intern",
+            "Assign Advanced Case Study",
+            "Assign Easier Case Study",
+            "Schedule Mentor Meeting",
+            "Recommend Interview",
+            "Recommend Job Placement",
+            "Recommend Internship Extension",
+            "Recommend Certificate Eligibility",
+            name="ai_recommendation_type_enum"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    category = Column(
+        Enum(
+            "Performance",
+            "Learning",
+            "Mentoring",
+            "Placement",
+            "Certification",
+            name="ai_recommendation_category_enum"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    title = Column(
+        String(250),
+        nullable=False
+    )
+
+    recommendation_reason = Column(
+        Text,
+        nullable=False
+    )
+
+    recommended_action = Column(
+        Text,
+        nullable=False
+    )
+
+    confidence_score = Column(
+        Float,
+        nullable=False
+    )
+
+    priority_score = Column(
+        Float,
+        nullable=False
+    )
+
+    priority_level = Column(
+        Enum(
+            "Low",
+            "Medium",
+            "High",
+            "Critical",
+            name="ai_recommendation_priority_enum"
+        ),
+        nullable=False,
+        default="Medium",
+        index=True
+    )
+
+    status = Column(
+        Enum(
+            "Generated",
+            "Pending Approval",
+            "Approved",
+            "Rejected",
+            "Completed",
+            name="ai_recommendation_status_enum"
+        ),
+        nullable=False,
+        default="Generated",
+        index=True
+    )
+
+    supporting_data = Column(
+        JSONB,
+        nullable=False,
+        default=dict
+    )
+
+    weak_areas = Column(
+        JSONB,
+        nullable=False,
+        default=list
+    )
+
+    strong_areas = Column(
+        JSONB,
+        nullable=False,
+        default=list
+    )
+
+    requires_human_review = Column(
+        Boolean,
+        nullable=False,
+        default=True
+    )
+
+    generated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True
+    )
+
+    submitted_for_approval_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    reviewed_by_admin_id = Column(
+        Integer,
+        ForeignKey(
+            "admins.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True
+    )
+
+    reviewed_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    review_notes = Column(
+        Text,
+        nullable=True
+    )
+
+    completed_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    completion_notes = Column(
+        Text,
+        nullable=True
+    )
+
+
+
+class PerformanceReport(Base):
+    __tablename__ = "performance_reports"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    report_type = Column(
+        String(100),
+        nullable=False,
+        index=True
+    )
+
+    title = Column(
+        String(250),
+        nullable=False
+    )
+
+    period_start = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    period_end = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    mentor_id = Column(
+        Integer,
+        ForeignKey(
+            "mentors.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    batch = Column(
+        String(100),
+        nullable=True,
+        index=True
+    )
+
+    generated_by_role = Column(
+        String(50),
+        nullable=False
+    )
+
+    generated_by_user_id = Column(
+        Integer,
+        nullable=True
+    )
+
+    summary = Column(
+        JSONB,
+        nullable=False,
+        default=dict
+    )
+
+    charts = Column(
+        JSONB,
+        nullable=False,
+        default=list
+    )
+
+    insights = Column(
+        JSONB,
+        nullable=False,
+        default=list
+    )
+
+    supporting_data = Column(
+        JSONB,
+        nullable=False,
+        default=dict
+    )
+
+    generated_at = Column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
