@@ -5,7 +5,7 @@ from backend.models import Base
 from backend.routers.auth_services import router as auth_router
 from fastapi import Depends
 from backend.routers import intelligence
-
+from backend.routers import daily_activity
 from backend.models import Student
 from utils.dependencies import get_current_student
 from backend.routers.attendance import router as attendance_router
@@ -22,6 +22,9 @@ app.include_router(
 )
 app.include_router(
     github_report.router
+)
+app.include_router(
+    daily_activity.router
 )
 app.include_router(auth_router)
 app.include_router(attendance_router)

@@ -1,6 +1,22 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func
+)
+
+
+from sqlalchemy import (
     Column,
     Date,
     DateTime,
@@ -490,4 +506,140 @@ class GitHubReport(Base):
         nullable=False,
         server_default=func.now(),
         index=True
+    )
+
+
+class DailyActivity(Base):
+    __tablename__ = "daily_activities"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "activity_date",
+            name="uq_student_daily_activity"
+        ),
+        CheckConstraint(
+            "hours_worked >= 0 AND hours_worked <= 24",
+            name="check_daily_activity_hours"
+        )
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    activity_date = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    task_title = Column(
+        String(200),
+        nullable=False
+    )
+
+    work_summary = Column(
+        String(2000),
+        nullable=False
+    )
+
+    hours_worked = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    task_status = Column(
+        Enum(
+            "Not Started",
+            "In Progress",
+            "Completed",
+            "Blocked",
+            name="daily_task_status_enum"
+        ),
+        nullable=False,
+        default="In Progress"
+    )
+
+    repository_url = Column(
+        String(500),
+        nullable=True
+    )
+
+    commit_url = Column(
+        String(500),
+        nullable=True
+    )
+
+    blockers = Column(
+        String(1000),
+        nullable=True
+    )
+
+    learning_outcome = Column(
+        String(1500),
+        nullable=True
+    )
+
+    submitted_at = Column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    verification_status = Column(
+        Enum(
+            "Pending",
+            "Verified",
+            "Rejected",
+            name="activity_verification_status_enum"
+        ),
+        nullable=False,
+        default="Pending",
+        index=True
+    )
+
+    mentor_id = Column(
+        Integer,
+        ForeignKey(
+            "mentors.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True
+    )
+
+    mentor_feedback = Column(
+        String(1500),
+        nullable=True
+    )
+
+    is_verified = Column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    verified_at = Column(
+        DateTime,
+        nullable=True
     )

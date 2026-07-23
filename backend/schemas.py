@@ -3,6 +3,15 @@ from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field
+from datetime import date, datetime
+from typing import Any, Literal
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl
+)
 
 class StudentRegistration(BaseModel):
     name: str
@@ -737,3 +746,187 @@ class GitHubRankingItem(BaseModel):
 class GitHubRankingResponse(BaseModel):
     total_students: int
     rankings: list[GitHubRankingItem]
+
+
+class DailyActivityCreate(BaseModel):
+    activity_date: date = Field(
+        default_factory=date.today
+    )
+
+    task_title: str = Field(
+        ...,
+        min_length=3,
+        max_length=200
+    )
+
+    work_summary: str = Field(
+        ...,
+        min_length=10,
+        max_length=2000
+    )
+
+    hours_worked: float = Field(
+        ...,
+        ge=0,
+        le=24
+    )
+
+    task_status: Literal[
+        "Not Started",
+        "In Progress",
+        "Completed",
+        "Blocked"
+    ] = "In Progress"
+
+    repository_url: str | None = Field(
+        default=None,
+        max_length=500
+    )
+
+    commit_url: str | None = Field(
+        default=None,
+        max_length=500
+    )
+
+    blockers: str | None = Field(
+        default=None,
+        max_length=1000
+    )
+
+    learning_outcome: str | None = Field(
+        default=None,
+        max_length=1500
+    )
+
+
+class DailyActivityUpdate(BaseModel):
+    task_title: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=200
+    )
+
+    work_summary: str | None = Field(
+        default=None,
+        min_length=10,
+        max_length=2000
+    )
+
+    hours_worked: float | None = Field(
+        default=None,
+        ge=0,
+        le=24
+    )
+
+    task_status: Literal[
+        "Not Started",
+        "In Progress",
+        "Completed",
+        "Blocked"
+    ] | None = None
+
+    repository_url: str | None = Field(
+        default=None,
+        max_length=500
+    )
+
+    commit_url: str | None = Field(
+        default=None,
+        max_length=500
+    )
+
+    blockers: str | None = Field(
+        default=None,
+        max_length=1000
+    )
+
+    learning_outcome: str | None = Field(
+        default=None,
+        max_length=1500
+    )
+
+
+class DailyActivityVerificationRequest(BaseModel):
+    verification_status: Literal[
+        "Verified",
+        "Rejected"
+    ]
+
+    mentor_feedback: str | None = Field(
+        default=None,
+        max_length=1500
+    )
+
+
+class DailyActivityResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    student_id: int
+    activity_date: date
+
+    task_title: str
+    work_summary: str
+    hours_worked: float
+    task_status: str
+
+    repository_url: str | None = None
+    commit_url: str | None = None
+    blockers: str | None = None
+    learning_outcome: str | None = None
+
+    submitted_at: datetime
+    updated_at: datetime
+
+    verification_status: str
+    mentor_id: int | None = None
+    mentor_feedback: str | None = None
+    is_verified: bool
+    verified_at: datetime | None = None
+
+
+class DailyActivityListResponse(BaseModel):
+    total_records: int
+    activities: list[DailyActivityResponse]
+
+
+class InactiveStudentItem(BaseModel):
+    student_id: int
+    student_name: str
+    email: str
+    batch: str | None = None
+    mentor_id: int | None = None
+
+    last_activity_date: date | None = None
+    days_inactive: int | None = None
+    activity_status: str
+
+
+class InactiveStudentsResponse(BaseModel):
+    inactivity_threshold_days: int
+    total_students: int
+    inactive_students_count: int
+    inactive_students: list[InactiveStudentItem]
+
+
+class DailyActivitySummaryResponse(BaseModel):
+    period_days: int
+
+    total_students: int
+    students_with_activity: int
+    students_without_activity: int
+
+    total_activity_records: int
+    verified_records: int
+    pending_records: int
+    rejected_records: int
+
+    completed_tasks: int
+    in_progress_tasks: int
+    blocked_tasks: int
+
+    total_hours_worked: float
+    average_hours_per_record: float
+    activity_submission_rate: float
