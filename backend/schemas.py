@@ -1755,3 +1755,224 @@ class MentorFeedbackSummaryResponse(BaseModel):
     average_communication_score: float
     average_leadership_score: float
     average_overall_feedback_score: float
+
+class LearningSpeedGenerateRequest(BaseModel):
+    student_id: int = Field(
+        ...,
+        ge=1
+    )
+
+    period_start: date
+    period_end: date
+
+    @model_validator(mode="after")
+    def validate_period(self):
+        if self.period_end < self.period_start:
+            raise ValueError(
+                "Period end cannot be earlier than period start."
+            )
+
+        if (
+            self.period_end - self.period_start
+        ).days > 365:
+            raise ValueError(
+                "Learning-speed period cannot exceed 365 days."
+            )
+
+        return self
+
+
+class LearningSpeedResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    student_id: int
+
+    period_start: date
+    period_end: date
+
+    tasks_completed: int
+    case_studies_completed: int
+    activity_days: int
+
+    average_task_completion_days: float
+    average_case_study_score: float
+    average_revision_count: float
+
+    task_speed_score: float
+    case_study_growth_score: float
+    revision_efficiency_score: float
+    activity_consistency_score: float
+    deadline_learning_score: float
+
+    learning_speed_score: float
+
+    previous_period_score: float | None = None
+    growth_percentage: float
+
+    learning_level: str
+    analysis_notes: str | None = None
+
+    generated_at: datetime
+
+
+class LearningSpeedListResponse(BaseModel):
+    total_records: int
+    records: list[LearningSpeedResponse]
+
+
+class LearningSpeedRankingItem(BaseModel):
+    rank: int
+    student_id: int
+    student_name: str
+
+    learning_speed_score: float
+    previous_period_score: float | None = None
+    growth_percentage: float
+
+    learning_level: str
+
+    tasks_completed: int
+    case_studies_completed: int
+    activity_days: int
+
+    period_start: date
+    period_end: date
+
+
+class LearningSpeedRankingResponse(BaseModel):
+    total_students: int
+    rankings: list[LearningSpeedRankingItem]
+
+
+class EngineeringCreditCreate(BaseModel):
+    student_id: int = Field(
+        ...,
+        ge=1
+    )
+
+    category: Literal[
+        "Task Completion",
+        "Case Study",
+        "GitHub Contribution",
+        "Communication",
+        "Leadership",
+        "Consistency",
+        "Deadline Compliance",
+        "Learning Growth",
+        "Bonus",
+        "Penalty"
+    ]
+
+    credit_value: int = Field(
+        ...,
+        ge=-1000,
+        le=1000
+    )
+
+    reason: str = Field(
+        ...,
+        min_length=5,
+        max_length=3000
+    )
+
+    source_type: str | None = Field(
+        default=None,
+        max_length=100
+    )
+
+    source_id: int | None = Field(
+        default=None,
+        ge=1
+    )
+
+    @model_validator(mode="after")
+    def validate_credit_type(self):
+        if (
+            self.category == "Penalty"
+            and self.credit_value > 0
+        ):
+            raise ValueError(
+                "Penalty credit value must be negative."
+            )
+
+        if (
+            self.category != "Penalty"
+            and self.credit_value < 0
+        ):
+            raise ValueError(
+                "Only penalty credits can be negative."
+            )
+
+        if (
+            self.source_type is None
+            and self.source_id is not None
+        ):
+            raise ValueError(
+                "Source type is required when source ID is provided."
+            )
+
+        return self
+
+
+class EngineeringCreditResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    student_id: int
+    awarded_by_mentor_id: int | None = None
+
+    category: str
+    credit_value: int
+    reason: str
+
+    source_type: str | None = None
+    source_id: int | None = None
+
+    awarded_at: datetime
+
+
+class EngineeringCreditListResponse(BaseModel):
+    student_id: int
+    total_credits: int
+    positive_credits: int
+    negative_credits: int
+    total_records: int
+
+    credits: list[EngineeringCreditResponse]
+
+
+class EngineeringCreditRankingItem(BaseModel):
+    rank: int
+    student_id: int
+    student_name: str
+
+    total_credits: int
+    positive_credits: int
+    penalty_credits: int
+    credit_records: int
+
+
+class EngineeringCreditRankingResponse(BaseModel):
+    total_students: int
+    rankings: list[EngineeringCreditRankingItem]
+
+
+class LearningCreditSummaryResponse(BaseModel):
+    total_learning_records: int
+    fast_learners: int
+    steady_learners: int
+    learners_needing_improvement: int
+    insufficient_data_students: int
+
+    average_learning_speed_score: float
+    average_growth_percentage: float
+
+    total_credit_transactions: int
+    total_positive_credits: int
+    total_penalty_credits: int
+    net_engineering_credits: int

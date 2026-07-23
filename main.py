@@ -17,6 +17,7 @@ from backend.routers import github_report
 from backend.routers import task_management
 from backend.routers import case_study
 from backend.routers import mentor_feedback
+from backend.routers import learning_credit
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -44,7 +45,7 @@ app.include_router(dashboard_router)
 app.include_router(leave_router)
 app.include_router(project_router)
 app.include_router(ai_router)
-
+app.include_router(learning_credit.router)
 @app.get("/student/profile")
 def student_profile(current_student: Student = Depends(get_current_student)):
     return {

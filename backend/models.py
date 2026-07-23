@@ -1393,3 +1393,271 @@ class MentorFeedback(Base):
         server_default=func.now(),
         onupdate=func.now()
     )
+
+class LearningSpeedRecord(Base):
+    __tablename__ = "learning_speed_records"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "period_start",
+            "period_end",
+            name="uq_learning_speed_student_period"
+        ),
+        CheckConstraint(
+            "task_speed_score >= 0 "
+            "AND task_speed_score <= 100",
+            name="check_learning_task_speed"
+        ),
+        CheckConstraint(
+            "case_study_growth_score >= 0 "
+            "AND case_study_growth_score <= 100",
+            name="check_learning_case_study_growth"
+        ),
+        CheckConstraint(
+            "revision_efficiency_score >= 0 "
+            "AND revision_efficiency_score <= 100",
+            name="check_learning_revision_efficiency"
+        ),
+        CheckConstraint(
+            "activity_consistency_score >= 0 "
+            "AND activity_consistency_score <= 100",
+            name="check_learning_activity_consistency"
+        ),
+        CheckConstraint(
+            "deadline_learning_score >= 0 "
+            "AND deadline_learning_score <= 100",
+            name="check_learning_deadline_score"
+        ),
+        CheckConstraint(
+            "learning_speed_score >= 0 "
+            "AND learning_speed_score <= 100",
+            name="check_learning_speed_score"
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    period_start = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    period_end = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    tasks_completed = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    case_studies_completed = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    activity_days = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    average_task_completion_days = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    average_case_study_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    average_revision_count = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    task_speed_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    case_study_growth_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    revision_efficiency_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    activity_consistency_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    deadline_learning_score = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    learning_speed_score = Column(
+        Float,
+        nullable=False,
+        default=0.0,
+        index=True
+    )
+
+    previous_period_score = Column(
+        Float,
+        nullable=True
+    )
+
+    growth_percentage = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    learning_level = Column(
+        Enum(
+            "Fast Learner",
+            "Steady Learner",
+            "Needs Improvement",
+            "Insufficient Data",
+            name="learning_speed_level_enum"
+        ),
+        nullable=False,
+        default="Insufficient Data",
+        index=True
+    )
+
+    analysis_notes = Column(
+        Text,
+        nullable=True
+    )
+
+    generated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now()
+    )
+
+
+class EngineeringCredit(Base):
+    __tablename__ = "engineering_credits"
+
+    __table_args__ = (
+        CheckConstraint(
+            "credit_value >= -1000 "
+            "AND credit_value <= 1000",
+            name="check_engineering_credit_value"
+        ),
+        UniqueConstraint(
+            "student_id",
+            "source_type",
+            "source_id",
+            "category",
+            name="uq_engineering_credit_source"
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    awarded_by_mentor_id = Column(
+        Integer,
+        ForeignKey(
+            "mentors.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    category = Column(
+        Enum(
+            "Task Completion",
+            "Case Study",
+            "GitHub Contribution",
+            "Communication",
+            "Leadership",
+            "Consistency",
+            "Deadline Compliance",
+            "Learning Growth",
+            "Bonus",
+            "Penalty",
+            name="engineering_credit_category_enum"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    credit_value = Column(
+        Integer,
+        nullable=False
+    )
+
+    reason = Column(
+        Text,
+        nullable=False
+    )
+
+    source_type = Column(
+        String(100),
+        nullable=True
+    )
+
+    source_id = Column(
+        Integer,
+        nullable=True
+    )
+
+    awarded_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True
+    )
