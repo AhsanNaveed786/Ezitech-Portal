@@ -4,20 +4,29 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Query,
     status
 )
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import Admin, Student
+from backend.models import (
+    Admin,
+    GitHubReport,
+    Student
+)
 from backend.schemas import (
+    GitHubRankingResponse,
+    GitHubReportHistoryResponse,
     GitHubReportRequest,
-    GitHubReportResponse
+    GitHubReportResponse,
+    GitHubSavedReportDetailResponse
 )
 from backend.services.github_report import (
     GitHubCodeReviewer,
     GitHubDataCollector,
     GitHubFinalReportBuilder,
+    GitHubReportStorageService,
     GitHubRepositoryAnalyzer
 )
 from backend.services.github_report.exceptions import (
@@ -38,6 +47,25 @@ router = APIRouter(
 )
 
 
+def get_student_or_404(
+    student_id: int,
+    db: Session
+) -> Student:
+    student = (
+        db.query(Student)
+        .filter(Student.id == student_id)
+        .first()
+    )
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student was not found."
+        )
+
+    return student
+
+
 @router.post(
     "/student/{student_id}/report",
     response_model=GitHubReportResponse,
@@ -51,17 +79,10 @@ async def generate_student_github_report(
     ),
     db: Session = Depends(get_db)
 ):
-    student = (
-        db.query(Student)
-        .filter(Student.id == student_id)
-        .first()
+    student = get_student_or_404(
+        student_id=student_id,
+        db=db
     )
-
-    if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student was not found."
-        )
 
     github_username = (
         student.github_username.strip()
@@ -73,18 +94,19 @@ async def generate_student_github_report(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "This student does not have a GitHub "
-                "username registered."
+                "This student does not have a "
+                "GitHub username registered."
             )
         )
 
     try:
         collector = GitHubDataCollector()
-
         analyzer = GitHubRepositoryAnalyzer()
 
         code_reviewer = GitHubCodeReviewer(
-            max_files=request.max_files_per_repository,
+            max_files=(
+                request.max_files_per_repository
+            ),
             max_chars_per_file=7000,
             max_total_chars=35000
         )
@@ -94,10 +116,15 @@ async def generate_student_github_report(
         )
 
         github_data = (
-            await collector.collect_student_github_data(
+            await collector
+            .collect_student_github_data(
                 username=github_username,
-                repository_limit=request.repository_limit,
-                commit_limit=request.commit_limit
+                repository_limit=(
+                    request.repository_limit
+                ),
+                commit_limit=(
+                    request.commit_limit
+                )
             )
         )
 
@@ -128,10 +155,19 @@ async def generate_student_github_report(
             )
         )
 
+        saved_report = (
+            GitHubReportStorageService.save_report(
+                db=db,
+                student=student,
+                final_report=final_report
+            )
+        )
+
         return {
             "student_id": student.id,
             "student_name": student.name,
             "github_username": github_username,
+            "saved_report_id": saved_report.id,
             "report": final_report
         }
 
@@ -158,11 +194,6 @@ async def generate_student_github_report(
         ) from error
 
     except GitHubRateLimitError as error:
-        logger.warning(
-            "GitHub rate limit exceeded: %s",
-            error
-        )
-
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=str(error)
@@ -170,14 +201,16 @@ async def generate_student_github_report(
 
     except GitHubAPIError as error:
         logger.exception(
-            "GitHub API request failed for student %s.",
-            student_id
+            "GitHub API request failed."
         )
 
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(error)
         ) from error
+
+    except HTTPException:
+        raise
 
     except Exception as error:
         logger.exception(
@@ -192,3 +225,145 @@ async def generate_student_github_report(
                 "The GitHub report could not be generated."
             )
         ) from error
+
+
+@router.get(
+    "/student/{student_id}/latest",
+    response_model=GitHubSavedReportDetailResponse
+)
+def get_latest_github_report(
+    student_id: int,
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    get_student_or_404(
+        student_id=student_id,
+        db=db
+    )
+
+    report = (
+        GitHubReportStorageService
+        .get_latest_student_report(
+            db=db,
+            student_id=student_id
+        )
+    )
+
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "No GitHub report exists for "
+                "this student."
+            )
+        )
+
+    return report
+
+
+@router.get(
+    "/student/{student_id}/history",
+    response_model=GitHubReportHistoryResponse
+)
+def get_github_report_history(
+    student_id: int,
+    limit: int = Query(
+        default=10,
+        ge=1,
+        le=50
+    ),
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    student = get_student_or_404(
+        student_id=student_id,
+        db=db
+    )
+
+    reports = (
+        GitHubReportStorageService
+        .get_student_report_history(
+            db=db,
+            student_id=student_id,
+            limit=limit
+        )
+    )
+
+    total_reports = (
+        GitHubReportStorageService
+        .count_student_reports(
+            db=db,
+            student_id=student_id
+        )
+    )
+
+    return {
+        "student_id": student.id,
+        "student_name": student.name,
+        "github_username": (
+            student.github_username or ""
+        ),
+        "total_reports": total_reports,
+        "reports": reports
+    }
+
+
+@router.get(
+    "/report/{report_id}",
+    response_model=GitHubSavedReportDetailResponse
+)
+def get_saved_github_report(
+    report_id: int,
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    report = (
+        GitHubReportStorageService
+        .get_report_by_id(
+            db=db,
+            report_id=report_id
+        )
+    )
+
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="GitHub report was not found."
+        )
+
+    return report
+
+
+@router.get(
+    "/top-students",
+    response_model=GitHubRankingResponse
+)
+def get_top_github_students(
+    limit: int = Query(
+        default=10,
+        ge=1,
+        le=100
+    ),
+    current_admin: Admin = Depends(
+        get_current_admin
+    ),
+    db: Session = Depends(get_db)
+):
+    rankings = (
+        GitHubReportStorageService
+        .get_latest_student_rankings(
+            db=db,
+            limit=limit
+        )
+    )
+
+    return {
+        "total_students": len(rankings),
+        "rankings": rankings
+    }
