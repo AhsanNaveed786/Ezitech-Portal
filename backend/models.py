@@ -837,3 +837,559 @@ class Task(Base):
         nullable=False,
         default=0
     )
+
+class CaseStudy(Base):
+    __tablename__ = "case_studies"
+
+    __table_args__ = (
+        CheckConstraint(
+            "progress_percentage >= 0 "
+            "AND progress_percentage <= 100",
+            name="check_case_study_progress"
+        ),
+        CheckConstraint(
+            "revision_count >= 0",
+            name="check_case_study_revision_count"
+        ),
+        CheckConstraint(
+            "technical_score IS NULL OR "
+            "(technical_score >= 0 AND technical_score <= 100)",
+            name="check_case_study_technical_score"
+        ),
+        CheckConstraint(
+            "code_quality_score IS NULL OR "
+            "(code_quality_score >= 0 AND code_quality_score <= 100)",
+            name="check_case_study_code_quality_score"
+        ),
+        CheckConstraint(
+            "documentation_score IS NULL OR "
+            "(documentation_score >= 0 AND documentation_score <= 100)",
+            name="check_case_study_documentation_score"
+        ),
+        CheckConstraint(
+            "problem_solving_score IS NULL OR "
+            "(problem_solving_score >= 0 AND problem_solving_score <= 100)",
+            name="check_case_study_problem_solving_score"
+        ),
+        CheckConstraint(
+            "presentation_score IS NULL OR "
+            "(presentation_score >= 0 AND presentation_score <= 100)",
+            name="check_case_study_presentation_score"
+        ),
+        CheckConstraint(
+            "final_score IS NULL OR "
+            "(final_score >= 0 AND final_score <= 100)",
+            name="check_case_study_final_score"
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    title = Column(
+        String(250),
+        nullable=False
+    )
+
+    description = Column(
+        Text,
+        nullable=False
+    )
+
+    objectives = Column(
+        Text,
+        nullable=False
+    )
+
+    requirements = Column(
+        Text,
+        nullable=True
+    )
+
+    technology = Column(
+        String(100),
+        nullable=False,
+        index=True
+    )
+
+    category = Column(
+        String(100),
+        nullable=False,
+        index=True
+    )
+
+    difficulty_level = Column(
+        Enum(
+            "Easy",
+            "Medium",
+            "Advanced",
+            name="case_study_difficulty_enum"
+        ),
+        nullable=False,
+        default="Medium",
+        index=True
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    assigned_by_mentor_id = Column(
+        Integer,
+        ForeignKey(
+            "mentors.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    status = Column(
+        Enum(
+            "Assigned",
+            "In Progress",
+            "Submitted",
+            "Revision Required",
+            "Resubmitted",
+            "Approved",
+            "Failed",
+            "Cancelled",
+            "Overdue",
+            name="case_study_status_enum"
+        ),
+        nullable=False,
+        default="Assigned",
+        index=True
+    )
+
+    progress_percentage = Column(
+        Float,
+        nullable=False,
+        default=0.0
+    )
+
+    assigned_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now()
+    )
+
+    start_date = Column(
+        Date,
+        nullable=False
+    )
+
+    due_date = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    started_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    submitted_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    evaluated_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    completed_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    github_repository_url = Column(
+        String(500),
+        nullable=True
+    )
+
+    live_demo_url = Column(
+        String(500),
+        nullable=True
+    )
+
+    documentation_url = Column(
+        String(500),
+        nullable=True
+    )
+
+    submission_notes = Column(
+        Text,
+        nullable=True
+    )
+
+    student_blockers = Column(
+        Text,
+        nullable=True
+    )
+
+    learning_outcome = Column(
+        Text,
+        nullable=True
+    )
+
+    technical_score = Column(
+        Float,
+        nullable=True
+    )
+
+    code_quality_score = Column(
+        Float,
+        nullable=True
+    )
+
+    documentation_score = Column(
+        Float,
+        nullable=True
+    )
+
+    problem_solving_score = Column(
+        Float,
+        nullable=True
+    )
+
+    presentation_score = Column(
+        Float,
+        nullable=True
+    )
+
+    final_score = Column(
+        Float,
+        nullable=True
+    )
+
+    performance_level = Column(
+        Enum(
+            "Excellent",
+            "Good",
+            "Average",
+            "Weak",
+            name="case_study_performance_enum"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    mentor_feedback = Column(
+        Text,
+        nullable=True
+    )
+
+    strengths = Column(
+        Text,
+        nullable=True
+    )
+
+    weak_areas = Column(
+        Text,
+        nullable=True
+    )
+
+    revision_instructions = Column(
+        Text,
+        nullable=True
+    )
+
+    revision_count = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    deadline_status = Column(
+        Enum(
+            "Pending",
+            "On Time",
+            "Late",
+            "Overdue",
+            name="case_study_deadline_enum"
+        ),
+        nullable=False,
+        default="Pending",
+        index=True
+    )
+
+    days_late = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+class MentorFeedback(Base):
+    __tablename__ = "mentor_feedback"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "mentor_id",
+            "review_date",
+            name="uq_student_mentor_feedback_date"
+        ),
+
+        CheckConstraint(
+            "technical_skill_score >= 0 "
+            "AND technical_skill_score <= 100",
+            name="check_feedback_technical_skill"
+        ),
+
+        CheckConstraint(
+            "problem_solving_score >= 0 "
+            "AND problem_solving_score <= 100",
+            name="check_feedback_problem_solving"
+        ),
+
+        CheckConstraint(
+            "consistency_score >= 0 "
+            "AND consistency_score <= 100",
+            name="check_feedback_consistency"
+        ),
+
+        CheckConstraint(
+            "learning_attitude_score >= 0 "
+            "AND learning_attitude_score <= 100",
+            name="check_feedback_learning_attitude"
+        ),
+
+        CheckConstraint(
+            "leadership_score >= 0 "
+            "AND leadership_score <= 100",
+            name="check_feedback_leadership"
+        ),
+
+        CheckConstraint(
+            "communication_clarity_score >= 0 "
+            "AND communication_clarity_score <= 100",
+            name="check_feedback_communication_clarity"
+        ),
+
+        CheckConstraint(
+            "responsiveness_score >= 0 "
+            "AND responsiveness_score <= 100",
+            name="check_feedback_responsiveness"
+        ),
+
+        CheckConstraint(
+            "professionalism_score >= 0 "
+            "AND professionalism_score <= 100",
+            name="check_feedback_professionalism"
+        ),
+
+        CheckConstraint(
+            "collaboration_score >= 0 "
+            "AND collaboration_score <= 100",
+            name="check_feedback_collaboration"
+        ),
+
+        CheckConstraint(
+            "meeting_participation_score >= 0 "
+            "AND meeting_participation_score <= 100",
+            name="check_feedback_meeting_participation"
+        ),
+
+        CheckConstraint(
+            "communication_score >= 0 "
+            "AND communication_score <= 100",
+            name="check_feedback_communication_score"
+        ),
+
+        CheckConstraint(
+            "overall_feedback_score >= 0 "
+            "AND overall_feedback_score <= 100",
+            name="check_feedback_overall_score"
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey(
+            "students.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    mentor_id = Column(
+        Integer,
+        ForeignKey(
+            "mentors.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    review_date = Column(
+        Date,
+        nullable=False,
+        index=True
+    )
+
+    review_period = Column(
+        Enum(
+            "Weekly",
+            "Monthly",
+            "Final",
+            name="mentor_feedback_period_enum"
+        ),
+        nullable=False,
+        default="Weekly"
+    )
+
+    technical_skill_score = Column(
+        Float,
+        nullable=False
+    )
+
+    problem_solving_score = Column(
+        Float,
+        nullable=False
+    )
+
+    consistency_score = Column(
+        Float,
+        nullable=False
+    )
+
+    learning_attitude_score = Column(
+        Float,
+        nullable=False
+    )
+
+    leadership_score = Column(
+        Float,
+        nullable=False
+    )
+
+    communication_clarity_score = Column(
+        Float,
+        nullable=False
+    )
+
+    responsiveness_score = Column(
+        Float,
+        nullable=False
+    )
+
+    professionalism_score = Column(
+        Float,
+        nullable=False
+    )
+
+    collaboration_score = Column(
+        Float,
+        nullable=False
+    )
+
+    meeting_participation_score = Column(
+        Float,
+        nullable=False
+    )
+
+    communication_score = Column(
+        Float,
+        nullable=False
+    )
+
+    overall_feedback_score = Column(
+        Float,
+        nullable=False
+    )
+
+    performance_level = Column(
+        Enum(
+            "Excellent",
+            "Good",
+            "Average",
+            "Weak",
+            name="mentor_feedback_performance_enum"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    communication_level = Column(
+        Enum(
+            "Excellent",
+            "Good",
+            "Average",
+            "Weak",
+            name="communication_performance_enum"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    strengths = Column(
+        Text,
+        nullable=True
+    )
+
+    weak_areas = Column(
+        Text,
+        nullable=True
+    )
+
+    improvement_plan = Column(
+        Text,
+        nullable=True
+    )
+
+    general_feedback = Column(
+        Text,
+        nullable=False
+    )
+
+    leadership_potential = Column(
+        Enum(
+            "High",
+            "Medium",
+            "Low",
+            name="leadership_potential_enum"
+        ),
+        nullable=False,
+        default="Low",
+        index=True
+    )
+
+    requires_mentor_meeting = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        index=True
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now()
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )

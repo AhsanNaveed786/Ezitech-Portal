@@ -1126,3 +1126,632 @@ class TaskSummaryResponse(BaseModel):
 
     task_completion_rate: float
     deadline_compliance_rate: float
+
+class CaseStudyCreate(BaseModel):
+    student_id: int = Field(
+        ...,
+        ge=1
+    )
+
+    title: str = Field(
+        ...,
+        min_length=3,
+        max_length=250
+    )
+
+    description: str = Field(
+        ...,
+        min_length=20,
+        max_length=10000
+    )
+
+    objectives: str = Field(
+        ...,
+        min_length=10,
+        max_length=5000
+    )
+
+    requirements: str | None = Field(
+        default=None,
+        max_length=10000
+    )
+
+    technology: str = Field(
+        ...,
+        min_length=2,
+        max_length=100
+    )
+
+    category: str = Field(
+        ...,
+        min_length=2,
+        max_length=100
+    )
+
+    difficulty_level: Literal[
+        "Easy",
+        "Medium",
+        "Advanced"
+    ] = "Medium"
+
+    start_date: date
+    due_date: date
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.due_date < self.start_date:
+            raise ValueError(
+                "Due date cannot be earlier than start date."
+            )
+
+        return self
+
+
+class CaseStudyProgressUpdate(BaseModel):
+    progress_percentage: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    student_blockers: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+    learning_outcome: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+
+class CaseStudySubmissionRequest(BaseModel):
+    github_repository_url: str = Field(
+        ...,
+        min_length=10,
+        max_length=500
+    )
+
+    live_demo_url: str | None = Field(
+        default=None,
+        max_length=500
+    )
+
+    documentation_url: str | None = Field(
+        default=None,
+        max_length=500
+    )
+
+    submission_notes: str = Field(
+        ...,
+        min_length=10,
+        max_length=5000
+    )
+
+    learning_outcome: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+
+class CaseStudyEvaluationRequest(BaseModel):
+    decision: Literal[
+        "Approved",
+        "Revision Required",
+        "Failed"
+    ]
+
+    technical_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    code_quality_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    documentation_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    problem_solving_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    presentation_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    mentor_feedback: str = Field(
+        ...,
+        min_length=5,
+        max_length=5000
+    )
+
+    strengths: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+    weak_areas: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+    revision_instructions: str | None = Field(
+        default=None,
+        max_length=5000
+    )
+
+    @model_validator(mode="after")
+    def validate_revision_instructions(self):
+        if (
+            self.decision == "Revision Required"
+            and not self.revision_instructions
+        ):
+            raise ValueError(
+                "Revision instructions are required "
+                "when revision is requested."
+            )
+
+        return self
+
+
+class CaseStudyResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    title: str
+    description: str
+    objectives: str
+    requirements: str | None = None
+
+    technology: str
+    category: str
+    difficulty_level: str
+
+    student_id: int
+    assigned_by_mentor_id: int | None = None
+
+    status: str
+    progress_percentage: float
+
+    assigned_at: datetime
+    start_date: date
+    due_date: date
+
+    started_at: datetime | None = None
+    submitted_at: datetime | None = None
+    evaluated_at: datetime | None = None
+    completed_at: datetime | None = None
+
+    github_repository_url: str | None = None
+    live_demo_url: str | None = None
+    documentation_url: str | None = None
+
+    submission_notes: str | None = None
+    student_blockers: str | None = None
+    learning_outcome: str | None = None
+
+    technical_score: float | None = None
+    code_quality_score: float | None = None
+    documentation_score: float | None = None
+    problem_solving_score: float | None = None
+    presentation_score: float | None = None
+
+    final_score: float | None = None
+    performance_level: str | None = None
+
+    mentor_feedback: str | None = None
+    strengths: str | None = None
+    weak_areas: str | None = None
+    revision_instructions: str | None = None
+
+    revision_count: int
+
+    deadline_status: str
+    days_late: int
+
+
+class CaseStudyListResponse(BaseModel):
+    total_records: int
+    case_studies: list[CaseStudyResponse]
+
+
+class CaseStudyRankingItem(BaseModel):
+    rank: int
+    case_study_id: int
+
+    student_id: int
+    student_name: str
+
+    title: str
+    technology: str
+    difficulty_level: str
+
+    final_score: float
+    performance_level: str
+
+    deadline_status: str
+    revision_count: int
+
+
+class CaseStudyRankingResponse(BaseModel):
+    total_students: int
+    rankings: list[CaseStudyRankingItem]
+
+
+class CaseStudySummaryResponse(BaseModel):
+    period_days: int
+
+    total_case_studies: int
+    assigned_case_studies: int
+    in_progress_case_studies: int
+    submitted_case_studies: int
+    revision_required_case_studies: int
+    approved_case_studies: int
+    failed_case_studies: int
+    overdue_case_studies: int
+
+    easy_case_studies: int
+    medium_case_studies: int
+    advanced_case_studies: int
+
+    on_time_submissions: int
+    late_submissions: int
+
+    average_final_score: float
+    approval_rate: float
+    failure_rate: float
+    deadline_compliance_rate: float
+
+
+class CaseStudyRecommendationItem(BaseModel):
+    student_id: int
+    student_name: str
+
+    completed_case_studies: int
+    average_score: float
+    average_revision_count: float
+
+    current_recommended_level: str
+    recommendation: str
+    reason: str
+
+
+class CaseStudyRecommendationsResponse(BaseModel):
+    total_students: int
+    recommendations: list[
+        CaseStudyRecommendationItem
+    ]
+
+class MentorFeedbackCreate(BaseModel):
+    student_id: int = Field(
+        ...,
+        ge=1
+    )
+
+    review_date: date = Field(
+        default_factory=date.today
+    )
+
+    review_period: Literal[
+        "Weekly",
+        "Monthly",
+        "Final"
+    ] = "Weekly"
+
+    technical_skill_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    problem_solving_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    consistency_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    learning_attitude_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    leadership_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    communication_clarity_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    responsiveness_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    professionalism_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    collaboration_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    meeting_participation_score: float = Field(
+        ...,
+        ge=0,
+        le=100
+    )
+
+    strengths: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+    weak_areas: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+    improvement_plan: str | None = Field(
+        default=None,
+        max_length=4000
+    )
+
+    general_feedback: str = Field(
+        ...,
+        min_length=5,
+        max_length=5000
+    )
+
+
+class MentorFeedbackUpdate(BaseModel):
+    technical_skill_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    problem_solving_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    consistency_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    learning_attitude_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    leadership_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    communication_clarity_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    responsiveness_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    professionalism_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    collaboration_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    meeting_participation_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=100
+    )
+
+    strengths: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+    weak_areas: str | None = Field(
+        default=None,
+        max_length=3000
+    )
+
+    improvement_plan: str | None = Field(
+        default=None,
+        max_length=4000
+    )
+
+    general_feedback: str | None = Field(
+        default=None,
+        min_length=5,
+        max_length=5000
+    )
+
+
+class MentorFeedbackResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    student_id: int
+    mentor_id: int
+
+    review_date: date
+    review_period: str
+
+    technical_skill_score: float
+    problem_solving_score: float
+    consistency_score: float
+    learning_attitude_score: float
+    leadership_score: float
+
+    communication_clarity_score: float
+    responsiveness_score: float
+    professionalism_score: float
+    collaboration_score: float
+    meeting_participation_score: float
+
+    communication_score: float
+    overall_feedback_score: float
+
+    performance_level: str
+    communication_level: str
+
+    strengths: str | None = None
+    weak_areas: str | None = None
+    improvement_plan: str | None = None
+    general_feedback: str
+
+    leadership_potential: str
+    requires_mentor_meeting: bool
+
+    created_at: datetime
+    updated_at: datetime
+
+
+class MentorFeedbackListResponse(BaseModel):
+    total_records: int
+    feedback_records: list[
+        MentorFeedbackResponse
+    ]
+
+
+class CommunicationRankingItem(BaseModel):
+    rank: int
+    student_id: int
+    student_name: str
+    mentor_id: int
+
+    communication_score: float
+    communication_level: str
+
+    leadership_score: float
+    leadership_potential: str
+
+    overall_feedback_score: float
+    review_date: date
+
+
+class CommunicationRankingResponse(BaseModel):
+    total_students: int
+    rankings: list[
+        CommunicationRankingItem
+    ]
+
+
+class WeakCommunicationItem(BaseModel):
+    student_id: int
+    student_name: str
+    mentor_id: int
+
+    communication_score: float
+    communication_level: str
+
+    weak_areas: str | None = None
+    improvement_plan: str | None = None
+
+    requires_mentor_meeting: bool
+    review_date: date
+
+
+class WeakCommunicationResponse(BaseModel):
+    score_threshold: float
+    total_students: int
+    students: list[
+        WeakCommunicationItem
+    ]
+
+
+class LeadershipPotentialItem(BaseModel):
+    student_id: int
+    student_name: str
+    mentor_id: int
+
+    leadership_score: float
+    leadership_potential: str
+
+    communication_score: float
+    overall_feedback_score: float
+
+    review_date: date
+
+
+class LeadershipPotentialResponse(BaseModel):
+    total_students: int
+    students: list[
+        LeadershipPotentialItem
+    ]
+
+
+class MentorFeedbackSummaryResponse(BaseModel):
+    period_days: int
+
+    total_feedback_records: int
+    students_reviewed: int
+    mentors_participated: int
+
+    excellent_performers: int
+    good_performers: int
+    average_performers: int
+    weak_performers: int
+
+    strong_communicators: int
+    weak_communicators: int
+
+    high_leadership_potential: int
+    mentor_meetings_required: int
+
+    average_technical_score: float
+    average_communication_score: float
+    average_leadership_score: float
+    average_overall_feedback_score: float
