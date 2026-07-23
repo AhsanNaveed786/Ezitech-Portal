@@ -641,3 +641,99 @@ class GitHubRankingItem(BaseModel):
 class GitHubRankingResponse(BaseModel):
     total_students: int
     rankings: list[GitHubRankingItem]
+
+
+class GitHubReportRequest(BaseModel):
+    repository_limit: int = Field(
+        default=5,
+        ge=1,
+        le=10
+    )
+
+    ai_repository_limit: int = Field(
+        default=2,
+        ge=1,
+        le=5
+    )
+
+    commit_limit: int = Field(
+        default=30,
+        ge=1,
+        le=100
+    )
+
+    max_files_per_repository: int = Field(
+        default=8,
+        ge=1,
+        le=20
+    )
+
+
+class GitHubReportResponse(BaseModel):
+    student_id: int
+    student_name: str
+    github_username: str
+    saved_report_id: int
+    report: dict[str, Any]
+
+
+class GitHubSavedReportResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    student_id: int
+    github_username: str
+
+    profile_score: float
+    activity_score: float
+    repository_quality_score: float
+    documentation_score: float
+    testing_score: float
+    ai_code_quality_score: float
+    final_github_score: float
+
+    performance_level: str
+    assessment_status: str
+
+    repositories_analyzed: int
+    repositories_with_ai_review: int
+
+    best_repository_name: str | None = None
+    generated_at: datetime
+
+
+class GitHubSavedReportDetailResponse(
+    GitHubSavedReportResponse
+):
+    report_json: dict[str, Any]
+
+
+class GitHubReportHistoryResponse(BaseModel):
+    student_id: int
+    student_name: str
+    github_username: str
+    total_reports: int
+    reports: list[GitHubSavedReportResponse]
+
+
+class GitHubRankingItem(BaseModel):
+    rank: int
+    report_id: int
+    student_id: int
+    student_name: str
+    github_username: str
+
+    final_github_score: float
+    ai_code_quality_score: float
+    activity_score: float
+
+    performance_level: str
+    best_repository_name: str | None = None
+    generated_at: datetime
+
+
+class GitHubRankingResponse(BaseModel):
+    total_students: int
+    rankings: list[GitHubRankingItem]

@@ -332,3 +332,27 @@ class GitHubReportStorageService:
 
         except (TypeError, ValueError):
             return 0
+
+@staticmethod
+def delete_report(
+    db: Session,
+    report_id: int
+) -> bool:
+    report = (
+        db.query(GitHubReport)
+        .filter(GitHubReport.id == report_id)
+        .first()
+    )
+
+    if not report:
+        return False
+
+    try:
+        db.delete(report)
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    return True
